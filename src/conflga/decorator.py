@@ -1,7 +1,7 @@
 from functools import wraps
-from typing import Callable, Concatenate, Optional, ParamSpec, TypeVar
+from typing import Callable, Concatenate, ParamSpec, TypeVar
 
-from pydantic import BaseModel
+from rich.console import Console
 
 from .manager import ConflgaManager
 from .config import ConflgaConfig
@@ -14,8 +14,11 @@ T = TypeVar("T")  # T 代表原始函数的返回类型
 def conflga_main(
     config_dir: str = "conf",
     default_config: str = "config",
-    configs_to_merge: Optional[list[str]] = None,
+    configs_to_merge: list[str] | None = None,
     enable_cli_override: bool = True,
+    auto_print: bool = True,  # 是否自动打印配置
+    auto_print_override: bool = True,  # 是否自动打印覆盖的配置
+    console: Console | None = None,  # 控制台对象，默认为 None
 ) -> Callable[
     [Callable[Concatenate[ConflgaConfig, P], T]],  # 接收的函数类型
     Callable[P, T],  # 返回的函数类型
@@ -59,8 +62,19 @@ def conflga_main(
                 # Only apply overrides if there are any
                 if override_config._data:  # Check if override config has any data
                     manager.override_config(override_config)
+                    if auto_print_override:
+                        override_config.pretty_print(
+                            title="Command Line Overrides", console=console
+                        )
 
             cfg = manager.get_config()
+            if auto_print:
+                cfg.pretty_print(
+                    title=f"Final Configuration",
+                    console=console,
+                    directory=config_dir,
+                    files=[default_config] + (configs_to_merge or []),
+                )
             return func(cfg, *args, **kwargs)
 
         return wrapper

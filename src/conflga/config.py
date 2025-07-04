@@ -1,7 +1,13 @@
 from typing import Any, Iterator, Mapping
 from collections.abc import MutableMapping
+import os
 
 import rtoml as toml
+from rich.console import Console
+from rich.tree import Tree
+from rich.text import Text
+from rich.panel import Panel
+from rich.table import Table
 
 
 class ConflgaConfig(MutableMapping):
@@ -107,3 +113,176 @@ class ConflgaConfig(MutableMapping):
 
         _recursive_merge(self._data, other_config._data)
         return self  # Return self for chaining
+
+    def pretty_print(
+        self,
+        title: str = "Configuration",
+        console: Console | None = None,
+        directory: str | None = None,
+        files: list[str] | None = None,
+    ) -> None:
+        """
+        使用 rich 库美观地打印配置内容。
+
+        Args:
+            title: 配置树的标题
+            console: rich Console 实例，如果为 None 则创建新的实例
+            directory: 配置文件所在的目录路径
+            files: 配置文件列表
+        """
+        if console is None:
+            console = Console()
+
+        # 如果提供了配置来源信息，先显示来源
+        if directory is not None or files is not None:
+            self._print_config_source(console, directory, files)
+            console.print()  # 添加一个空行分隔
+
+        tree = Tree(Text(title, style="bold blue"))
+        self._build_tree(tree, self._data)
+        console.print(tree)
+
+    def _print_config_source(
+        self,
+        console: Console,
+        directory: str | None = None,
+        files: list[str] | None = None,
+    ) -> None:
+        """
+        打印配置来源信息。
+
+        Args:
+            console: rich Console 实例
+            directory: 配置文件所在的目录路径
+            files: 配置文件列表
+        """
+
+        # 创建配置来源信息表格
+        source_table = Table(show_header=True, header_style="bold magenta")
+        source_table.add_column("Property", style="cyan", no_wrap=True)
+        source_table.add_column("Value", style="white")
+
+        if directory is not None:
+            # 显示目录信息
+            abs_dir = os.path.abspath(directory)
+            source_table.add_row("Config Directory", abs_dir)
+
+            # 检查目录是否存在
+            if os.path.exists(directory):
+                source_table.add_row("Directory Status", "[green]✓ Exists[/green]")
+            else:
+                source_table.add_row("Directory Status", "[red]✗ Not Found[/red]")
+
+        if files is not None and len(files) > 0:
+            # 显示文件信息
+            for i, file in enumerate(files):
+                file_label = f"Config File {i+1}" if len(files) > 1 else "Config File"
+
+                if directory is not None:
+                    # 如果有目录，显示相对路径和绝对路径
+                    full_path = os.path.join(directory, file)
+                    abs_path = os.path.abspath(full_path)
+                    source_table.add_row(file_label, f"{file}")
+                    source_table.add_row(f"  └─ Full Path", abs_path)
+
+                    # 检查文件是否存在
+                    if os.path.exists(full_path):
+                        source_table.add_row(
+                            f"  └─ File Status", "[green]✓ Exists[/green]"
+                        )
+                        # 显示文件大小
+                        try:
+                            size = os.path.getsize(full_path)
+                            if size < 1024:
+                                size_str = f"{size} B"
+                            elif size < 1024 * 1024:
+                                size_str = f"{size / 1024:.1f} KB"
+                            else:
+                                size_str = f"{size / (1024 * 1024):.1f} MB"
+                            source_table.add_row(f"  └─ File Size", size_str)
+                        except OSError:
+                            pass
+                    else:
+                        source_table.add_row(
+                            f"  └─ File Status", "[red]✗ Not Found[/red]"
+                        )
+                else:
+                    # 没有目录，直接显示文件路径
+                    abs_path = os.path.abspath(file)
+                    source_table.add_row(file_label, abs_path)
+
+                    # 检查文件是否存在
+                    if os.path.exists(file):
+                        source_table.add_row(
+                            f"  └─ File Status", "[green]✓ Exists[/green]"
+                        )
+                    else:
+                        source_table.add_row(
+                            f"  └─ File Status", "[red]✗ Not Found[/red]"
+                        )
+
+        # 在面板中显示配置来源信息
+        panel = Panel(
+            source_table,
+            title="[bold yellow]📁 Configuration Source[/bold yellow]",
+            border_style="yellow",
+            padding=(1, 1),
+        )
+        console.print(panel)
+
+    def _build_tree(self, parent: Tree, data: Any) -> None:
+        """
+        递归构建配置树结构。
+
+        Args:
+            parent: 父级树节点
+            data: 要添加到树中的数据
+        """
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if isinstance(value, ConflgaConfig):
+                    # 嵌套配置对象
+                    branch = parent.add(Text(f"{key}", style="bold green"))
+                    self._build_tree(branch, value._data)
+                elif isinstance(value, dict):
+                    # 普通字典
+                    branch = parent.add(Text(f"{key}", style="bold green"))
+                    self._build_tree(branch, value)
+                elif isinstance(value, list):
+                    # 列表
+                    branch = parent.add(Text(f"{key}", style="bold cyan"))
+                    self._build_tree(branch, value)
+                else:
+                    # 简单值
+                    value_str = self._format_value(value)
+                    parent.add(Text(f"{key}: {value_str}", style="dim"))
+        elif isinstance(data, list):
+            for i, item in enumerate(data):
+                if isinstance(item, (dict, ConflgaConfig, list)):
+                    branch = parent.add(Text(f"[{i}]", style="bold yellow"))
+                    if isinstance(item, ConflgaConfig):
+                        self._build_tree(branch, item._data)
+                    else:
+                        self._build_tree(branch, item)
+                else:
+                    value_str = self._format_value(item)
+                    parent.add(Text(f"[{i}]: {value_str}", style="dim"))
+
+    def _format_value(self, value: Any) -> str:
+        """
+        格式化单个值的显示。
+
+        Args:
+            value: 要格式化的值
+
+        Returns:
+            格式化后的字符串
+        """
+        if value is None:
+            return "null"
+        elif isinstance(value, str):
+            return f'"{value}"'
+        elif isinstance(value, bool):
+            return str(value).lower()
+        else:
+            return str(value)
