@@ -186,17 +186,17 @@ class ConflgaConfig(MutableMapping):
                         source_table.add_row(
                             f"  └─ File Status", "[green]✓ Exists[/green]"
                         )
-                    try:
-                        size = file_path.stat().st_size
-                        if size < 1024:
-                            size_str = f"{size} B"
-                        elif size < 1024 * 1024:
-                            size_str = f"{size / 1024:.1f} KB"
-                        else:
-                            size_str = f"{size / (1024 * 1024):.1f} MB"
-                            source_table.add_row(f"  └─ File Size", size_str)
-                    except OSError:
-                        pass
+                        try:
+                            size = file_path.stat().st_size
+                            if size < 1024:
+                                size_str = f"{size} B"
+                            elif size < 1024 * 1024:
+                                size_str = f"{size / 1024:.1f} KB"
+                            else:
+                                size_str = f"{size / (1024 * 1024):.1f} MB"
+                                source_table.add_row(f"  └─ File Size", size_str)
+                        except OSError:
+                            pass
                     else:
                         source_table.add_row(
                             f"  └─ File Status", "[red]✗ Not Found[/red]"
