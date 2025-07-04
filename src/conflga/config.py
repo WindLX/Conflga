@@ -1,6 +1,6 @@
 from typing import Any, Iterator, Mapping
 from collections.abc import MutableMapping
-import os
+from pathlib import Path
 
 import rtoml as toml
 from rich.console import Console
@@ -163,56 +163,49 @@ class ConflgaConfig(MutableMapping):
         source_table.add_column("Value", style="white")
 
         if directory is not None:
-            # 显示目录信息
-            abs_dir = os.path.abspath(directory)
-            source_table.add_row("Config Directory", abs_dir)
+            dir_path = Path(directory).resolve()
+            source_table.add_row("Config Directory", str(dir_path))
 
-            # 检查目录是否存在
-            if os.path.exists(directory):
+            if dir_path.exists():
                 source_table.add_row("Directory Status", "[green]✓ Exists[/green]")
             else:
                 source_table.add_row("Directory Status", "[red]✗ Not Found[/red]")
 
         if files is not None and len(files) > 0:
-            # 显示文件信息
             for i, file in enumerate(files):
                 file_label = f"Config File {i+1}" if len(files) > 1 else "Config File"
+                file_name = f"{file}.toml"
 
                 if directory is not None:
-                    # 如果有目录，显示相对路径和绝对路径
-                    full_path = os.path.join(directory, file)
-                    abs_path = os.path.abspath(full_path)
-                    source_table.add_row(file_label, f"{file}")
-                    source_table.add_row(f"  └─ Full Path", abs_path)
+                    file_path = Path(directory) / file_name
+                    abs_path = file_path.resolve()
+                    source_table.add_row(file_label, file_name)
+                    source_table.add_row(f"  └─ Full Path", str(abs_path))
 
-                    # 检查文件是否存在
-                    if os.path.exists(full_path):
+                    if file_path.exists():
                         source_table.add_row(
                             f"  └─ File Status", "[green]✓ Exists[/green]"
                         )
-                        # 显示文件大小
-                        try:
-                            size = os.path.getsize(full_path)
-                            if size < 1024:
-                                size_str = f"{size} B"
-                            elif size < 1024 * 1024:
-                                size_str = f"{size / 1024:.1f} KB"
-                            else:
-                                size_str = f"{size / (1024 * 1024):.1f} MB"
+                    try:
+                        size = file_path.stat().st_size
+                        if size < 1024:
+                            size_str = f"{size} B"
+                        elif size < 1024 * 1024:
+                            size_str = f"{size / 1024:.1f} KB"
+                        else:
+                            size_str = f"{size / (1024 * 1024):.1f} MB"
                             source_table.add_row(f"  └─ File Size", size_str)
-                        except OSError:
-                            pass
+                    except OSError:
+                        pass
                     else:
                         source_table.add_row(
                             f"  └─ File Status", "[red]✗ Not Found[/red]"
                         )
                 else:
-                    # 没有目录，直接显示文件路径
-                    abs_path = os.path.abspath(file)
-                    source_table.add_row(file_label, abs_path)
+                    file_path = Path(f"{file}.toml").resolve()
+                    source_table.add_row(file_label, str(file_path))
 
-                    # 检查文件是否存在
-                    if os.path.exists(file):
+                    if file_path.exists():
                         source_table.add_row(
                             f"  └─ File Status", "[green]✓ Exists[/green]"
                         )

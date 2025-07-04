@@ -1,3 +1,5 @@
+import os
+
 from conflga.config import ConflgaConfig
 
 
@@ -67,23 +69,16 @@ def test_pretty_print():
     config.pretty_print(
         title="带来源信息的配置",
         directory="/etc/myapp",
-        files=["config.toml", "secrets.toml"],
+        files=["config", "secrets"],
     )
 
     print("\n=== 测试单个配置文件来源 ===")
-    config.pretty_print(title="单文件配置", directory="./conf", files=["app.toml"])
+    config.pretty_print(title="单文件配置", directory="./conf", files=["app"])
 
     print("\n=== 测试仅文件路径（无目录） ===")
     config.pretty_print(
-        title="绝对路径配置", files=["/home/user/config.toml", "/etc/app/settings.toml"]
+        title="绝对路径配置", files=["/home/user/config", "/etc/app/settings"]
     )
-
-    print("\n=== 测试现有配置文件（如果存在） ===")
-    # 测试项目中实际存在的文件
-    import os
-
-    if os.path.exists("./pyproject.toml"):
-        config.pretty_print(title="项目配置", directory=".", files=["pyproject.toml"])
 
 
 if __name__ == "__main__":
