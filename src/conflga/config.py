@@ -61,7 +61,7 @@ class ConflgaConfig(MutableMapping):
         Loads configuration from a TOML file.
         """
         with open(toml_path, "r", encoding="utf-8") as f:
-            data = toml.load(f)
+            data = toml.load(f, none_value="@None")
         return cls._create_nested_config(data)
 
     @classmethod
@@ -69,7 +69,7 @@ class ConflgaConfig(MutableMapping):
         """
         Loads configuration from a TOML string.
         """
-        data = toml.loads(toml_string)
+        data = toml.loads(toml_string, none_value="@None")
         return cls._create_nested_config(data)
 
     @staticmethod
