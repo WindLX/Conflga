@@ -12,7 +12,7 @@ class ConflgaLogger:
     _logger: logging.Logger | None = None
 
     @classmethod
-    def set_logger_name(cls, name: str) -> None:
+    def set_logger(cls, name: str) -> None:
         """
         设置库使用的 logger 名称。
 
@@ -20,7 +20,7 @@ class ConflgaLogger:
             name: logger 名称
         """
         cls._logger_name = name
-        cls._logger = None  # 重置 logger 实例，下次获取时会使用新名称
+        cls._logger = logging.getLogger(name)
 
     @classmethod
     def get_logger(cls) -> logging.Logger:
@@ -209,7 +209,7 @@ def set_conflga_logger_name(name: str) -> None:
         >>> import conflga
         >>> conflga.set_conflga_logger_name("my_app.config")
     """
-    ConflgaLogger.set_logger_name(name)
+    ConflgaLogger.set_logger(name)
 
 
 def get_conflga_logger() -> logging.Logger:
