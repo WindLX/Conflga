@@ -198,7 +198,7 @@ class ConflgaLogger:
 
 
 # 便利函数
-def set_conflga_logger_name(name: str) -> None:
+def set_conflga_logger(name: str) -> None:
     """
     设置 Conflga 库使用的 logger 名称。
 

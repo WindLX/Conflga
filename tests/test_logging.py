@@ -7,44 +7,31 @@ import logging
 import conflga
 
 # 设置 conflga 使用的 logger 名称
-conflga.set_conflga_logger_name("test_app")
+conflga.set_conflga_logger("test_app")
 
 # 配置基本的 logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(name)s] %(levelname)s: %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="[%(name)s] %(levelname)s: %(message)s")
 
 # 测试直接使用 ConflgaConfig
 print("=== 测试 1: 直接使用 ConflgaConfig ===")
 from conflga import ConflgaConfig
 
-config = ConflgaConfig({
-    "model": {
-        "learning_rate": 0.001,
-        "dropout": 0.2,
-        "layers": [128, 64, 32]
-    },
-    "dataset": {
-        "batch_size": 32,
-        "shuffle": True
-    },
-    "training": {
-        "epochs": 100,
-        "early_stopping": True
+config = ConflgaConfig(
+    {
+        "model": {"learning_rate": 0.001, "dropout": 0.2, "layers": [128, 64, 32]},
+        "dataset": {"batch_size": 32, "shuffle": True},
+        "training": {"epochs": 100, "early_stopping": True},
     }
-})
+)
 
 config.pretty_print(title="测试配置")
 
 print("\n=== 测试 2: 命令行覆盖 ===")
 from conflga import create_override_config_from_args
 
-override_config = create_override_config_from_args([
-    "model.learning_rate=0.01",
-    "dataset.batch_size=64",
-    "new_param=hello"
-])
+override_config = create_override_config_from_args(
+    ["model.learning_rate=0.01", "dataset.batch_size=64", "new_param=hello"]
+)
 
 override_config.pretty_print(title="覆盖配置")
 
