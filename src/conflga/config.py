@@ -114,6 +114,22 @@ class ConflgaConfig(MutableMapping):
         _recursive_merge(self._data, other_config._data)
         return self  # Return self for chaining
 
+    def _convert_value(self, value: Any) -> Any:
+        """Recursively convert ConflgaConfig objects to regular dicts."""
+        if isinstance(value, ConflgaConfig):
+            return value.to_dict()
+        elif isinstance(value, list):
+            return [self._convert_value(item) for item in value]
+        else:
+            return value
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Converts the configuration to a regular dictionary.
+        """
+
+        return {k: self._convert_value(v) for k, v in self._data.items()}
+
     def pretty_print(
         self,
         title: str = "Configuration",
