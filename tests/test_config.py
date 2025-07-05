@@ -199,3 +199,220 @@ def test_empty_config():
 
     config_from_string = ConflgaConfig.from_string("")
     assert len(config_from_string) == 0
+
+
+def test_to_dict_basic():
+    """Test converting configuration to dictionary with basic structure."""
+    config = ConflgaConfig.from_string(BASIC_TOML_CONTENT)
+    result = config.to_dict()
+
+    # Should return a regular dict, not ConflgaConfig
+    assert isinstance(result, dict)
+    assert not isinstance(result, ConflgaConfig)
+
+    # Check the structure and values
+    assert result == {
+        "app": {"name": "MyApp", "version": 1.0},
+        "database": {"host": "localhost", "port": 5432},
+    }
+
+    # Nested dictionaries should also be regular dicts
+    assert isinstance(result["app"], dict)
+    assert isinstance(result["database"], dict)
+    assert not isinstance(result["app"], ConflgaConfig)
+    assert not isinstance(result["database"], ConflgaConfig)
+
+
+def test_to_dict_nested():
+    """Test converting deeply nested configuration to dictionary."""
+    nested_toml = """
+    [network]
+    ip = "192.168.1.1"
+    [network.ports]
+    http = 80
+    https = 443
+    [network.ports.ssl]
+    certificate = "/path/to/cert"
+    key = "/path/to/key"
+    """
+    config = ConflgaConfig.from_string(nested_toml)
+    result = config.to_dict()
+
+    expected = {
+        "network": {
+            "ip": "192.168.1.1",
+            "ports": {
+                "http": 80,
+                "https": 443,
+                "ssl": {"certificate": "/path/to/cert", "key": "/path/to/key"},
+            },
+        }
+    }
+
+    assert result == expected
+
+    # Verify all nested levels are regular dicts
+    assert isinstance(result["network"], dict)
+    assert isinstance(result["network"]["ports"], dict)
+    assert isinstance(result["network"]["ports"]["ssl"], dict)
+    assert not isinstance(result["network"], ConflgaConfig)
+    assert not isinstance(result["network"]["ports"], ConflgaConfig)
+    assert not isinstance(result["network"]["ports"]["ssl"], ConflgaConfig)
+
+
+def test_to_dict_with_lists():
+    """Test converting configuration with lists to dictionary."""
+    toml_with_lists = """
+    servers = ["server1", "server2", "server3"]
+
+    [database]
+    replicas = [
+        {host = "db1", port = 5432},
+        {host = "db2", port = 5433}
+    ]
+    """
+    config = ConflgaConfig.from_string(toml_with_lists)
+    result = config.to_dict()
+
+    expected = {
+        "servers": ["server1", "server2", "server3"],
+        "database": {
+            "replicas": [
+                {"host": "db1", "port": 5432},
+                {"host": "db2", "port": 5433},
+            ]
+        },
+    }
+
+    assert result == expected
+
+    # Lists should remain as lists
+    assert isinstance(result["servers"], list)
+    assert isinstance(result["database"]["replicas"], list)
+
+    # Dict items in lists should be regular dicts
+    for replica in result["database"]["replicas"]:
+        assert isinstance(replica, dict)
+        assert not isinstance(replica, ConflgaConfig)
+
+
+def test_to_dict_empty_config():
+    """Test converting empty configuration to dictionary."""
+    config = ConflgaConfig()
+    result = config.to_dict()
+
+    assert result == {}
+    assert isinstance(result, dict)
+
+
+def test_to_dict_mixed_types():
+    """Test converting configuration with mixed data types."""
+    toml_mixed = """
+    string_val = "hello"
+    int_val = 42
+    float_val = 3.14
+    bool_val = true
+
+    [section]
+    none_val = "@None"  # Special handling for None values
+    list_val = [1, 2, 3]
+    """
+    config = ConflgaConfig.from_string(toml_mixed)
+    result = config.to_dict()
+
+    expected = {
+        "string_val": "hello",
+        "int_val": 42,
+        "float_val": 3.14,
+        "bool_val": True,
+        "section": {
+            "none_val": None,
+            "list_val": [1, 2, 3],
+        },
+    }
+
+    assert result == expected
+
+
+def test_to_dict_preserves_original_config():
+    """Test that to_dict doesn't modify the original configuration."""
+    config = ConflgaConfig.from_string(BASIC_TOML_CONTENT)
+    original_data = config._data.copy()
+
+    result = config.to_dict()
+
+    # Original config should remain unchanged
+    assert config._data == original_data
+    assert isinstance(config.app, ConflgaConfig)
+    assert isinstance(config.database, ConflgaConfig)
+
+    # But result should be regular dicts
+    assert isinstance(result["app"], dict)
+    assert isinstance(result["database"], dict)
+
+
+def test_to_dict_after_modifications():
+    """Test to_dict after modifying the configuration."""
+    config = ConflgaConfig.from_string(BASIC_TOML_CONTENT)
+
+    # Modify the config
+    config.app.debug = True
+    config.new_section = ConflgaConfig({"key": "value"})
+
+    result = config.to_dict()
+
+    expected = {
+        "app": {"name": "MyApp", "version": 1.0, "debug": True},
+        "database": {"host": "localhost", "port": 5432},
+        "new_section": {"key": "value"},
+    }
+
+    assert result == expected
+
+
+def test_to_dict_deeply_nested_lists():
+    """Test converting configuration with deeply nested lists and configs."""
+    toml_complex = """
+    [[services]]
+    name = "web"
+    
+    [services.config]
+    port = 80
+    host = "localhost"
+    
+    [[services]]
+    name = "db"
+    
+    [services.config]
+    port = 5432
+    host = "db.example.com"
+    
+    [meta]
+    nested_lists = [
+        ["item1", "item2"],
+        ["item3", "item4"]
+    ]
+    """
+    config = ConflgaConfig.from_string(toml_complex)
+    result = config.to_dict()
+
+    # Verify the structure is correctly converted
+    assert isinstance(result, dict)
+    assert isinstance(result["services"], list)
+    assert len(result["services"]) == 2
+
+    # Check each service in the list
+    for service in result["services"]:
+        assert isinstance(service, dict)
+        assert not isinstance(service, ConflgaConfig)
+        assert "name" in service
+        assert "config" in service
+        assert isinstance(service["config"], dict)
+        assert not isinstance(service["config"], ConflgaConfig)
+
+    # Check nested lists
+    assert isinstance(result["meta"]["nested_lists"], list)
+    for nested_list in result["meta"]["nested_lists"]:
+        assert isinstance(nested_list, list)
+        for item in nested_list:
+            assert isinstance(item, str)
