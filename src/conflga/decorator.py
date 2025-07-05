@@ -19,6 +19,7 @@ def conflga_main(
     auto_print: bool = True,  # 是否自动打印配置
     auto_print_override: bool = True,  # 是否自动打印覆盖的配置
     console: Console | None = None,  # 控制台对象，默认为 None
+    use_namespace_prefix: bool = True,  # 是否使用命名空间前缀避免冲突
 ) -> Callable[
     [Callable[Concatenate[ConflgaConfig, P], T]],  # 接收的函数类型
     Callable[P, T],  # 返回的函数类型
@@ -34,14 +35,19 @@ def conflga_main(
                                                  to merge, overriding the default.
         enable_cli_override (bool): Whether to enable command line override functionality.
                                    When True, the decorator will parse command line arguments
-                                   for configuration overrides using -o/--override flags.
+                                   for configuration overrides.
+        use_namespace_prefix (bool): Whether to use --conflga-override (True) to avoid conflicts
+                                   or -o/--override (False) for backward compatibility.
 
     Example:
         @conflga_main(config_dir="conf", default_config="config", enable_cli_override=True)
         def main(cfg: ConflgaConfig):
             print(f"Learning rate: {cfg.model.learning_rate}")
 
-        # Can be called with: python script.py -o model.learning_rate=0.001 -o dataset.batch_size=32
+        # Can be called with:
+        # python script.py --conflga-override model.learning_rate=0.001 --conflga-override dataset.batch_size=32
+        # or with use_namespace_prefix=False:
+        # python script.py -o model.learning_rate=0.001 -o dataset.batch_size=32
     """
 
     def decorator(func: Callable[Concatenate[ConflgaConfig, P], T]) -> Callable[P, T]:
@@ -57,7 +63,8 @@ def conflga_main(
 
             # Apply command line overrides if enabled
             if enable_cli_override:
-                cli = ConflgaCLI()
+                # Use configurable namespace prefix
+                cli = ConflgaCLI(use_namespace_prefix=use_namespace_prefix)
                 override_config = cli.parse_overrides()
                 # Only apply overrides if there are any
                 if override_config._data:  # Check if override config has any data

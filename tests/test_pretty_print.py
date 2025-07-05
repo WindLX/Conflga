@@ -1,5 +1,3 @@
-import os
-
 from conflga.config import ConflgaConfig
 
 

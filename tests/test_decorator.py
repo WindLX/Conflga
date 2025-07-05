@@ -200,6 +200,7 @@ def test_conflga_main_decorator_cli_override_with_args(
             config_dir=temp_config_dir,
             default_config="base_cfg",
             enable_cli_override=True,
+            use_namespace_prefix=False,  # Use -o for backward compatibility in tests
         )
         def func_with_cli_args(cfg: ConflgaConfig):
             return cfg.model.lr, cfg.epochs, cfg.batch_size, cfg.model.dropout
@@ -236,6 +237,7 @@ def test_conflga_main_decorator_cli_override_complex_values(
             config_dir=temp_config_dir,
             default_config="base_cfg",
             enable_cli_override=True,
+            use_namespace_prefix=False,  # Use -o for backward compatibility in tests
         )
         def func_with_complex_overrides(cfg: ConflgaConfig):
             return cfg.model.layers, cfg.training.enabled, cfg.data.paths
@@ -262,6 +264,7 @@ def test_conflga_main_decorator_cli_override_with_merge(
             default_config="base_cfg",
             configs_to_merge=["exp_cfg"],
             enable_cli_override=True,
+            use_namespace_prefix=False,  # Use -o for backward compatibility in tests
         )
         def func_merge_and_override(cfg: ConflgaConfig):
             return cfg.model.lr, cfg.epochs, cfg.batch_size
@@ -303,6 +306,7 @@ def test_conflga_main_decorator_nested_overrides(temp_config_dir, create_toml_fi
             config_dir=temp_config_dir,
             default_config="nested_cfg",
             enable_cli_override=True,
+            use_namespace_prefix=False,  # Use -o for backward compatibility in tests
         )
         def func_nested_overrides(cfg: ConflgaConfig):
             return (
@@ -366,3 +370,61 @@ def test_conflga_main_decorator_with_args_and_kwargs(temp_config_dir, create_tom
         assert multiplier == 2
         assert args_tuple == (1, 2, 3)
         assert kwargs_dict == {"key": "value"}
+
+
+def test_conflga_main_decorator_namespace_prefix_parameter(
+    temp_config_dir, create_toml_file
+):
+    """Test decorator with namespace prefix parameter."""
+    create_toml_file("base_cfg", {"model": {"lr": 0.01}, "epochs": 10})
+
+    # Test with namespace prefix enabled (default)
+    with patch(
+        "sys.argv",
+        [
+            "test_script.py",
+            "--conflga-override",
+            "model.lr=0.001",
+            "--conflga-override",
+            "epochs=100",
+        ],
+    ):
+
+        @conflga_main(
+            config_dir=temp_config_dir,
+            default_config="base_cfg",
+            enable_cli_override=True,
+            use_namespace_prefix=True,  # Default behavior
+        )
+        def func_with_namespace_prefix(cfg: ConflgaConfig):
+            return cfg.model.lr, cfg.epochs
+
+        lr, epochs = func_with_namespace_prefix()
+        assert lr == 0.001
+        assert epochs == 100
+
+
+def test_conflga_main_decorator_backward_compatibility_parameter(
+    temp_config_dir, create_toml_file
+):
+    """Test decorator with backward compatibility parameter."""
+    create_toml_file("base_cfg", {"model": {"lr": 0.01}, "epochs": 10})
+
+    # Test with namespace prefix disabled (backward compatibility)
+    with patch(
+        "sys.argv",
+        ["test_script.py", "-o", "model.lr=0.001", "-o", "epochs=100"],
+    ):
+
+        @conflga_main(
+            config_dir=temp_config_dir,
+            default_config="base_cfg",
+            enable_cli_override=True,
+            use_namespace_prefix=False,  # Backward compatibility
+        )
+        def func_with_backward_compatibility(cfg: ConflgaConfig):
+            return cfg.model.lr, cfg.epochs
+
+        lr, epochs = func_with_backward_compatibility()
+        assert lr == 0.001
+        assert epochs == 100

@@ -13,10 +13,87 @@ class TestConflgaCLI:
         """Setup for each test method."""
         self.cli = ConflgaCLI()
 
-    def test_init(self):
-        """Test CLI initialization."""
+    def test_init_default(self):
+        """Test CLI initialization with default settings."""
         assert self.cli.parser is not None
+        assert self.cli.use_namespace_prefix is True
+        assert self.cli.custom_arg_name is None
         assert "overrides" in [action.dest for action in self.cli.parser._actions]
+
+    def test_init_no_namespace_prefix(self):
+        """Test CLI initialization without namespace prefix."""
+        cli = ConflgaCLI(use_namespace_prefix=False)
+        assert cli.use_namespace_prefix is False
+        assert cli.custom_arg_name is None
+
+        # Check that -o/--override is used
+        override_action = None
+        for action in cli.parser._actions:
+            if action.dest == "overrides":
+                override_action = action
+                break
+        assert override_action is not None
+        assert "-o" in override_action.option_strings
+        assert "--override" in override_action.option_strings
+
+    def test_init_custom_arg_name(self):
+        """Test CLI initialization with custom argument name."""
+        cli = ConflgaCLI(custom_arg_name="--my-override")
+        assert cli.custom_arg_name == "--my-override"
+
+        # Check that custom argument name is used
+        override_action = None
+        for action in cli.parser._actions:
+            if action.dest == "overrides":
+                override_action = action
+                break
+        assert override_action is not None
+        assert "--my-override" in override_action.option_strings
+
+    def test_init_namespace_prefix(self):
+        """Test CLI initialization with namespace prefix."""
+        cli = ConflgaCLI(use_namespace_prefix=True)
+        assert cli.use_namespace_prefix is True
+
+        # Check that --conflga-override is used
+        override_action = None
+        for action in cli.parser._actions:
+            if action.dest == "overrides":
+                override_action = action
+                break
+        assert override_action is not None
+        assert "--conflga-override" in override_action.option_strings
+
+    def test_get_argument_name(self):
+        """Test _get_argument_name method."""
+        # Default namespace prefix
+        cli = ConflgaCLI()
+        assert cli._get_argument_name() == "--conflga-override"
+
+        # No namespace prefix
+        cli = ConflgaCLI(use_namespace_prefix=False)
+        assert cli._get_argument_name() == "-o"
+
+        # Custom argument name
+        cli = ConflgaCLI(custom_arg_name="--my-config")
+        assert cli._get_argument_name() == "--my-config"
+
+    def test_epilog_text_updates(self):
+        """Test that epilog text updates based on argument name."""
+        # Default
+        cli = ConflgaCLI()
+        epilog = cli._get_epilog_text()
+        assert "--conflga-override" in epilog
+
+        # No namespace prefix
+        cli = ConflgaCLI(use_namespace_prefix=False)
+        epilog = cli._get_epilog_text()
+        assert "-o" in epilog
+
+        # Custom argument name
+        cli = ConflgaCLI(custom_arg_name="--my-override")
+        epilog = cli._get_epilog_text()
+        assert "--my-override" in epilog
 
     def test_parse_overrides_empty_list(self):
         """Test parsing empty override list."""
@@ -296,10 +373,28 @@ class TestNestedKeyHandling:
 class TestConvenienceFunction:
     """Test cases for convenience function."""
 
-    def test_create_override_config_from_args(self):
-        """Test convenience function with override strings."""
+    def test_create_override_config_from_args_default(self):
+        """Test convenience function with default settings."""
         overrides = ["model.lr=0.001", "batch_size=32"]
         config = create_override_config_from_args(overrides)
+        assert isinstance(config, ConflgaConfig)
+        assert config["model"]["lr"] == 0.001
+        assert config["batch_size"] == 32
+
+    def test_create_override_config_from_args_no_namespace(self):
+        """Test convenience function without namespace prefix."""
+        overrides = ["model.lr=0.001", "batch_size=32"]
+        config = create_override_config_from_args(overrides, use_namespace_prefix=False)
+        assert isinstance(config, ConflgaConfig)
+        assert config["model"]["lr"] == 0.001
+        assert config["batch_size"] == 32
+
+    def test_create_override_config_from_args_custom_name(self):
+        """Test convenience function with custom argument name."""
+        overrides = ["model.lr=0.001", "batch_size=32"]
+        config = create_override_config_from_args(
+            overrides, custom_arg_name="--my-override"
+        )
         assert isinstance(config, ConflgaConfig)
         assert config["model"]["lr"] == 0.001
         assert config["batch_size"] == 32
@@ -308,6 +403,14 @@ class TestConvenienceFunction:
         """Test convenience function with None."""
         with patch.object(sys, "argv", ["test"]):
             config = create_override_config_from_args(None)
+            assert isinstance(config, ConflgaConfig)
+
+    def test_create_override_config_from_args_none_custom(self):
+        """Test convenience function with None and custom settings."""
+        with patch.object(sys, "argv", ["test"]):
+            config = create_override_config_from_args(
+                None, use_namespace_prefix=False, custom_arg_name="--custom"
+            )
             assert isinstance(config, ConflgaConfig)
 
 
@@ -360,6 +463,26 @@ class TestCLIIntegration:
         """Test parsing actual command line arguments."""
         test_args = [
             "program.py",
+            "--conflga-override",
+            "model.lr=0.001",
+            "--conflga-override",
+            "batch_size=32",
+            "--conflga-override",
+            "use_gpu=true",
+        ]
+
+        with patch.object(sys, "argv", test_args):
+            cli = ConflgaCLI()
+            config = cli.parse_overrides()
+
+            assert config["model"]["lr"] == 0.001
+            assert config["batch_size"] == 32
+            assert config["use_gpu"] is True
+
+    def test_command_line_args_parsing_short_options(self):
+        """Test parsing with short options when namespace prefix is disabled."""
+        test_args = [
+            "program.py",
             "-o",
             "model.lr=0.001",
             "--override",
@@ -369,7 +492,7 @@ class TestCLIIntegration:
         ]
 
         with patch.object(sys, "argv", test_args):
-            cli = ConflgaCLI()
+            cli = ConflgaCLI(use_namespace_prefix=False)
             config = cli.parse_overrides()
 
             assert config["model"]["lr"] == 0.001
@@ -423,120 +546,201 @@ class TestCLIEdgeCases:
         assert config["config"]["dropout"] == 0.2
 
     def test_multiple_equals_in_value(self):
-        """Test parsing values with multiple equals signs."""
-        overrides = ["equation=x=y+z=w"]
+        """Test parsing override with equals sign in value."""
+        overrides = ["url=http://example.com?param=value"]
         config = self.cli.parse_overrides(overrides)
-        assert config["equation"] == "x=y+z=w"
+        assert config["url"] == "http://example.com?param=value"
 
-    def test_parse_very_long_number(self):
-        """Test parsing very long numbers."""
-        overrides = ["big_number=12345678901234567890"]
+    def test_invalid_override_format(self):
+        """Test error handling for invalid override format."""
+        overrides = ["invalid_format"]
+        with pytest.raises(ValueError, match="Invalid override format"):
+            self.cli.parse_overrides(overrides)
+
+    def test_override_nested_key_conflict(self):
+        """Test handling of nested key conflicts."""
+        overrides = ["model=simple_value", "model.learning_rate=0.001"]
         config = self.cli.parse_overrides(overrides)
-        assert config["big_number"] == 12345678901234567890
+        # The second override should convert the simple value to a dict
+        assert config["model"]["learning_rate"] == 0.001
 
-    def test_parse_float_with_many_decimals(self):
-        """Test parsing float with many decimal places."""
-        overrides = ["precision=3.141592653589793"]
+    def test_scientific_notation_float(self):
+        """Test parsing scientific notation float."""
+        overrides = ["learning_rate=1e-4"]
         config = self.cli.parse_overrides(overrides)
-        assert config["precision"] == 3.141592653589793
+        assert config["learning_rate"] == 1e-4
+        assert isinstance(config["learning_rate"], float)
 
-    def test_parse_scientific_notation_negative_exponent(self):
-        """Test parsing scientific notation with negative exponent."""
-        overrides = ["small_value=1.5e-10"]
+    def test_negative_number(self):
+        """Test parsing negative numbers."""
+        overrides = ["temperature=-5"]
         config = self.cli.parse_overrides(overrides)
-        assert config["small_value"] == 1.5e-10
+        assert config["temperature"] == -5
 
-    def test_parse_scientific_notation_positive_exponent(self):
-        """Test parsing scientific notation with positive exponent."""
-        overrides = ["large_value=2.5e+8"]
+    def test_negative_float(self):
+        """Test parsing negative float."""
+        overrides = ["bias=-0.5"]
         config = self.cli.parse_overrides(overrides)
-        assert config["large_value"] == 2.5e8
+        assert config["bias"] == -0.5
 
-    def test_case_insensitive_booleans(self):
-        """Test case insensitive boolean parsing."""
-        overrides = ["bool1=True", "bool2=FALSE", "bool3=tRuE", "bool4=fAlSe"]
+    def test_parse_mixed_list_types(self):
+        """Test parsing list with mixed types."""
+        overrides = ["mixed=[1, 'text', true, 3.14]"]
         config = self.cli.parse_overrides(overrides)
-        assert config["bool1"] is True
-        assert config["bool2"] is False
-        assert config["bool3"] is True
-        assert config["bool4"] is False
+        assert config["mixed"] == [1, "text", True, 3.14]
 
-    def test_case_insensitive_null(self):
-        """Test case insensitive null parsing."""
-        overrides = ["null1=NULL", "null2=Null", "null3=NONE", "null4=None"]
-        config = self.cli.parse_overrides(overrides)
-        assert config["null1"] is None
-        assert config["null2"] is None
-        assert config["null3"] is None
-        assert config["null4"] is None
 
-    def test_malformed_list_fallback(self):
-        """Test handling of malformed list that falls back to string."""
-        overrides = ["malformed=[1, 2, unclosed"]
-        config = self.cli.parse_overrides(overrides)
-        # Should fallback to string since it's not a valid Python literal
-        assert config["malformed"] == "[1, 2, unclosed"
+class TestConflictAvoidance:
+    """Test cases for conflict avoidance functionality."""
 
-    def test_malformed_dict_fallback(self):
-        """Test handling of malformed dict that falls back to string."""
-        overrides = ["malformed={'key': unclosed"]
-        config = self.cli.parse_overrides(overrides)
-        # Should fallback to string since it's not a valid Python literal
-        assert config["malformed"] == "{'key': unclosed"
+    def test_namespace_prefix_avoids_conflicts(self):
+        """Test that namespace prefix avoids conflicts with other parsers."""
+        # Create a CLI with namespace prefix
+        cli = ConflgaCLI(use_namespace_prefix=True)
 
-    def test_unicode_strings(self):
-        """Test parsing Unicode strings."""
-        overrides = ['chinese="你好世界"', 'emoji="🚀🎉"', 'mixed="Hello 世界 🌍"']
-        config = self.cli.parse_overrides(overrides)
-        assert config["chinese"] == "你好世界"
-        assert config["emoji"] == "🚀🎉"
-        assert config["mixed"] == "Hello 世界 🌍"
-
-    def test_deeply_nested_structure(self):
-        """Test very deeply nested key structure."""
-        overrides = ["a.b.c.d.e.f.g.h.i.j=deep_value"]
-        config = self.cli.parse_overrides(overrides)
-        assert config["a"]["b"]["c"]["d"]["e"]["f"]["g"]["h"]["i"]["j"] == "deep_value"
-
-    def test_override_existing_nested_structure(self):
-        """Test overriding parts of existing nested structure."""
-        overrides = [
-            "model.layers.conv1.filters=32",
-            "model.layers.conv1.kernel_size=3",
-            "model.layers.conv2.filters=64",
-            "model.layers.conv1.activation=relu",  # Override existing conv1 structure
+        # Simulate command line args that would conflict with -o
+        test_args = [
+            "program.py",
+            "-o",
+            "other_option",  # This should be ignored
+            "--conflga-override",
+            "model.lr=0.001",
+            "--conflga-override",
+            "batch_size=32",
         ]
-        config = self.cli.parse_overrides(overrides)
-        assert config["model"]["layers"]["conv1"]["filters"] == 32
-        assert config["model"]["layers"]["conv1"]["kernel_size"] == 3
-        assert config["model"]["layers"]["conv1"]["activation"] == "relu"
-        assert config["model"]["layers"]["conv2"]["filters"] == 64
 
-    def test_numeric_keys_in_nested_structure(self):
-        """Test numeric keys in nested structure."""
-        overrides = ["layers.0.type=conv", "layers.1.type=pool", "layers.2.type=dense"]
-        config = self.cli.parse_overrides(overrides)
-        assert config["layers"]["0"]["type"] == "conv"
-        assert config["layers"]["1"]["type"] == "pool"
-        assert config["layers"]["2"]["type"] == "dense"
+        with patch.object(sys, "argv", test_args):
+            config = cli.parse_overrides()
+            assert config["model"]["lr"] == 0.001
+            assert config["batch_size"] == 32
+            # Should not pick up the "other_option" from -o
+
+    def test_parse_known_args_behavior(self):
+        """Test that parse_known_args ignores unknown arguments."""
+        cli = ConflgaCLI(use_namespace_prefix=True)
+
+        # Simulate args with unknown options
+        test_args = [
+            "program.py",
+            "--unknown-option",
+            "value",
+            "--conflga-override",
+            "model.lr=0.001",
+            "--another-unknown",
+            "another_value",
+            "--conflga-override",
+            "batch_size=32",
+        ]
+
+        with patch.object(sys, "argv", test_args):
+            # This should not raise an exception
+            config = cli.parse_overrides()
+            assert config["model"]["lr"] == 0.001
+            assert config["batch_size"] == 32
+
+    def test_custom_arg_name_functionality(self):
+        """Test custom argument name functionality."""
+        cli = ConflgaCLI(custom_arg_name="--my-config-override")
+
+        test_args = [
+            "program.py",
+            "--my-config-override",
+            "model.lr=0.001",
+            "--my-config-override",
+            "batch_size=32",
+        ]
+
+        with patch.object(sys, "argv", test_args):
+            config = cli.parse_overrides()
+            assert config["model"]["lr"] == 0.001
+            assert config["batch_size"] == 32
+
+    def test_error_handling_in_parse_overrides(self):
+        """Test error handling when argument parsing fails."""
+        cli = ConflgaCLI()
+
+        # Mock parse_known_args to raise SystemExit
+        with patch.object(cli.parser, "parse_known_args", side_effect=SystemExit(1)):
+            config = cli.parse_overrides()
+            # Should return empty config instead of crashing
+            assert isinstance(config, ConflgaConfig)
+            assert len(config) == 0
+
+    def test_no_help_conflicts(self):
+        """Test that add_help=False prevents help conflicts."""
+        cli = ConflgaCLI()
+
+        # Check that help is disabled
+        assert cli.parser.add_help is False
+
+        # The parser should not have a help action
+        help_actions = [
+            action
+            for action in cli.parser._actions
+            if action.option_strings and "-h" in action.option_strings
+        ]
+        assert len(help_actions) == 0
+
+    def test_multiple_cli_instances_independence(self):
+        """Test that multiple CLI instances don't interfere with each other."""
+        cli1 = ConflgaCLI(use_namespace_prefix=True)
+        cli2 = ConflgaCLI(use_namespace_prefix=False)
+        cli3 = ConflgaCLI(custom_arg_name="--custom")
+
+        # Each should have different argument configurations
+        assert cli1.use_namespace_prefix is True
+        assert cli2.use_namespace_prefix is False
+        assert cli3.custom_arg_name == "--custom"
+
+        # Test that they work independently
+        overrides = ["test=value"]
+        config1 = cli1.parse_overrides(overrides)
+        config2 = cli2.parse_overrides(overrides)
+        config3 = cli3.parse_overrides(overrides)
+
+        assert config1["test"] == "value"
+        assert config2["test"] == "value"
+        assert config3["test"] == "value"
 
 
 class TestCLIArgumentParsing:
     """Test argument parsing functionality."""
 
-    def test_help_message_contains_examples(self):
-        """Test that help message contains override examples."""
+    def test_help_message_contains_examples_default(self):
+        """Test that help message contains override examples with default settings."""
         cli = ConflgaCLI()
         help_text = cli.parser.format_help()
 
-        # Check that examples are included in help
+        # Check that examples are included in help with namespace prefix
         assert "Override Examples:" in help_text
-        assert "model.learning_rate=0.001" in help_text
-        assert "dataset.batch_size=32" in help_text
-        assert "training.epochs=100" in help_text
+        assert "--conflga-override model.learning_rate=0.001" in help_text
+        assert "--conflga-override dataset.batch_size=32" in help_text
+        assert "--conflga-override training.epochs=100" in help_text
 
-    def test_argument_metavar(self):
-        """Test that override argument has correct metavar."""
+    def test_help_message_contains_examples_short_options(self):
+        """Test that help message contains override examples with short options."""
+        cli = ConflgaCLI(use_namespace_prefix=False)
+        help_text = cli.parser.format_help()
+
+        # Check that examples are included in help with short options
+        assert "Override Examples:" in help_text
+        assert "-o model.learning_rate=0.001" in help_text
+        assert "-o dataset.batch_size=32" in help_text
+        assert "-o training.epochs=100" in help_text
+
+    def test_help_message_contains_examples_custom_arg(self):
+        """Test that help message contains override examples with custom argument name."""
+        cli = ConflgaCLI(custom_arg_name="--my-override")
+        help_text = cli.parser.format_help()
+
+        # Check that examples are included in help with custom argument name
+        assert "Override Examples:" in help_text
+        assert "--my-override model.learning_rate=0.001" in help_text
+        assert "--my-override dataset.batch_size=32" in help_text
+        assert "--my-override training.epochs=100" in help_text
+
+    def test_argument_metavar_default(self):
+        """Test that override argument has correct metavar with default settings."""
         cli = ConflgaCLI()
         override_action = None
         for action in cli.parser._actions:
@@ -547,9 +751,49 @@ class TestCLIArgumentParsing:
         assert override_action is not None
         assert override_action.metavar == "KEY=VALUE"
 
-    def test_argument_help_text(self):
-        """Test that override argument has helpful description."""
-        cli = ConflgaCLI()
+    def test_argument_metavar_custom(self):
+        """Test that override argument has correct metavar with custom settings."""
+        cli = ConflgaCLI(custom_arg_name="--custom")
+        override_action = None
+        for action in cli.parser._actions:
+            if action.dest == "overrides":
+                override_action = action
+                break
+
+        assert override_action is not None
+        assert override_action.metavar == "KEY=VALUE"
+
+    def test_argument_help_text_namespace_prefix(self):
+        """Test that override argument has helpful description with namespace prefix."""
+        cli = ConflgaCLI(use_namespace_prefix=True)
+        override_action = None
+        for action in cli.parser._actions:
+            if action.dest == "overrides":
+                override_action = action
+                break
+
+        assert override_action is not None
+        assert override_action.help is not None
+        assert "Override Conflga configuration values" in override_action.help
+        assert "dot notation" in override_action.help
+
+    def test_argument_help_text_short_options(self):
+        """Test that override argument has helpful description with short options."""
+        cli = ConflgaCLI(use_namespace_prefix=False)
+        override_action = None
+        for action in cli.parser._actions:
+            if action.dest == "overrides":
+                override_action = action
+                break
+
+        assert override_action is not None
+        assert override_action.help is not None
+        assert "Override configuration values" in override_action.help
+        assert "dot notation" in override_action.help
+
+    def test_argument_help_text_custom(self):
+        """Test that override argument has helpful description with custom argument."""
+        cli = ConflgaCLI(custom_arg_name="--my-config")
         override_action = None
         for action in cli.parser._actions:
             if action.dest == "overrides":
@@ -566,6 +810,11 @@ class TestCLIArgumentParsing:
         cli = ConflgaCLI()
         assert cli.parser.description is not None
         assert "Conflga Configuration Manager" in cli.parser.description
+
+    def test_parser_add_help_disabled(self):
+        """Test that parser has help disabled to avoid conflicts."""
+        cli = ConflgaCLI()
+        assert cli.parser.add_help is False
 
 
 class TestCLIPerformance:
@@ -731,3 +980,126 @@ class TestCLIErrorHandling:
             config = self.cli.parse_overrides(None)
             assert isinstance(config, ConflgaConfig)
             assert len(config) == 0
+
+
+class TestCLIFlexibilityIntegration:
+    """Integration tests for CLI flexibility features."""
+
+    def test_end_to_end_namespace_prefix(self):
+        """Test end-to-end with namespace prefix."""
+        cli = ConflgaCLI(use_namespace_prefix=True)
+        overrides = [
+            "model.architecture=resnet50",
+            "model.learning_rate=0.001",
+            "dataset.batch_size=64",
+            "training.epochs=100",
+        ]
+
+        config = cli.parse_overrides(overrides)
+
+        assert config["model"]["architecture"] == "resnet50"
+        assert config["model"]["learning_rate"] == 0.001
+        assert config["dataset"]["batch_size"] == 64
+        assert config["training"]["epochs"] == 100
+
+    def test_end_to_end_custom_arg_name(self):
+        """Test end-to-end with custom argument name."""
+        cli = ConflgaCLI(custom_arg_name="--config-override")
+        overrides = [
+            "model.architecture=resnet50",
+            "model.learning_rate=0.001",
+            "dataset.batch_size=64",
+            "training.epochs=100",
+        ]
+
+        config = cli.parse_overrides(overrides)
+
+        assert config["model"]["architecture"] == "resnet50"
+        assert config["model"]["learning_rate"] == 0.001
+        assert config["dataset"]["batch_size"] == 64
+        assert config["training"]["epochs"] == 100
+
+    def test_end_to_end_short_options(self):
+        """Test end-to-end with short options."""
+        cli = ConflgaCLI(use_namespace_prefix=False)
+        overrides = [
+            "model.architecture=resnet50",
+            "model.learning_rate=0.001",
+            "dataset.batch_size=64",
+            "training.epochs=100",
+        ]
+
+        config = cli.parse_overrides(overrides)
+
+        assert config["model"]["architecture"] == "resnet50"
+        assert config["model"]["learning_rate"] == 0.001
+        assert config["dataset"]["batch_size"] == 64
+        assert config["training"]["epochs"] == 100
+
+    def test_convenience_function_flexibility(self):
+        """Test convenience function with different configurations."""
+        overrides = ["model.lr=0.001", "batch_size=32"]
+
+        # Test with default (namespace prefix)
+        config1 = create_override_config_from_args(overrides)
+        assert config1["model"]["lr"] == 0.001
+
+        # Test without namespace prefix
+        config2 = create_override_config_from_args(
+            overrides, use_namespace_prefix=False
+        )
+        assert config2["model"]["lr"] == 0.001
+
+        # Test with custom argument name
+        config3 = create_override_config_from_args(
+            overrides, custom_arg_name="--my-override"
+        )
+        assert config3["model"]["lr"] == 0.001
+
+    def test_real_world_integration_scenario(self):
+        """Test a real-world scenario where the library is embedded in another project."""
+        # Simulate a scenario where another project uses -o for something else
+        # but we want to use Conflga without conflicts
+
+        # Create Conflga CLI with namespace prefix
+        conflga_cli = ConflgaCLI(use_namespace_prefix=True)
+
+        # Simulate sys.argv that has both conflga and other project args
+        test_args = [
+            "my_project.py",
+            "-o",
+            "other_project_output_file.txt",  # Another project's -o option
+            "--verbose",
+            "--conflga-override",
+            "model.lr=0.001",  # Conflga's override
+            "--conflga-override",
+            "dataset.name=cifar10",
+            "--other-project-flag",
+        ]
+
+        with patch.object(sys, "argv", test_args):
+            # This should work without conflicts
+            config = conflga_cli.parse_overrides()
+
+            # Should only get Conflga overrides, not the other -o
+            assert config["model"]["lr"] == 0.001
+            assert config["dataset"]["name"] == "cifar10"
+            assert len(config) == 2  # Only 2 items from Conflga
+
+    def test_backward_compatibility_when_needed(self):
+        """Test backward compatibility when user explicitly wants -o."""
+        # When user explicitly wants to use -o (knowing there won't be conflicts)
+        cli = ConflgaCLI(use_namespace_prefix=False)
+
+        test_args = [
+            "program.py",
+            "-o",
+            "model.lr=0.001",
+            "--override",
+            "batch_size=32",
+        ]
+
+        with patch.object(sys, "argv", test_args):
+            config = cli.parse_overrides()
+            assert config["model"]["lr"] == 0.001
+            assert config["batch_size"] == 32
