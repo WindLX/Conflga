@@ -1,7 +1,6 @@
 from functools import wraps
 from typing import Callable, Concatenate, ParamSpec, TypeVar
-
-from rich.console import Console
+import logging
 
 from .manager import ConflgaManager
 from .config import ConflgaConfig
@@ -18,7 +17,7 @@ def conflga_main(
     enable_cli_override: bool = True,
     auto_print: bool = True,  # 是否自动打印配置
     auto_print_override: bool = True,  # 是否自动打印覆盖的配置
-    console: Console | None = None,  # 控制台对象，默认为 None
+    log_level: int = logging.INFO,  # 日志级别
     use_namespace_prefix: bool = True,  # 是否使用命名空间前缀避免冲突
 ) -> Callable[
     [Callable[Concatenate[ConflgaConfig, P], T]],  # 接收的函数类型
@@ -36,6 +35,9 @@ def conflga_main(
         enable_cli_override (bool): Whether to enable command line override functionality.
                                    When True, the decorator will parse command line arguments
                                    for configuration overrides.
+        auto_print (bool): Whether to automatically print the final configuration.
+        auto_print_override (bool): Whether to automatically print override configuration.
+        log_level (int): Logging level for configuration printing.
         use_namespace_prefix (bool): Whether to use --conflga-override (True) to avoid conflicts
                                    or -o/--override (False) for backward compatibility.
 
@@ -55,11 +57,25 @@ def conflga_main(
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             # Initialize configuration manager and load base configuration
             manager = ConflgaManager(config_dir=config_dir)
-            manager.load_default(default_config)
+
+            # Try to load default config, create empty config if file doesn't exist
+            try:
+                manager.load_default(default_config)
+            except FileNotFoundError:
+                # Create empty config if no default config file exists
+                manager._config = ConflgaConfig({})
 
             # Merge additional configuration files if specified
             if configs_to_merge:
-                manager.merge_config(*configs_to_merge)
+                # Only try to merge configs that actually exist
+                existing_configs = []
+                for config_name in configs_to_merge:
+                    config_path = manager.config_dir / f"{config_name}.toml"
+                    if config_path.exists():
+                        existing_configs.append(config_name)
+
+                if existing_configs:
+                    manager.merge_config(*existing_configs)
 
             # Apply command line overrides if enabled
             if enable_cli_override:
@@ -71,16 +87,16 @@ def conflga_main(
                     manager.override_config(override_config)
                     if auto_print_override:
                         override_config.pretty_print(
-                            title="Command Line Overrides", console=console
+                            title="Command Line Overrides", level=log_level
                         )
 
             cfg = manager.get_config()
             if auto_print:
                 cfg.pretty_print(
                     title=f"Final Configuration",
-                    console=console,
                     directory=config_dir,
                     files=[default_config] + (configs_to_merge or []),
+                    level=log_level,
                 )
             return func(cfg, *args, **kwargs)
 

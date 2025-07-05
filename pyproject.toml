@@ -8,7 +8,6 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "rich>=14.0.0",
     "rtoml>=0.12.0",
 ]
 
