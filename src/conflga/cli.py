@@ -130,7 +130,7 @@ Override Examples:
         if override_strings is None:
             override_strings = []
 
-        override_dict = {}
+        override_dict: dict[str, Any] = {}
 
         for override_str in override_strings:
             if "=" not in override_str:
