@@ -6,6 +6,7 @@ from rich.console import Console
 from .manager import ConflgaManager
 from .config import ConflgaConfig
 from .cli import ConflgaCLI
+from .console import get_echoa, ConflgaEchoa
 
 P = ParamSpec("P")  # P 代表装饰后函数所接受的参数
 T = TypeVar("T")  # T 代表原始函数的返回类型
@@ -16,10 +17,11 @@ def conflga_main(
     default_config: str = "config",
     configs_to_merge: list[str] | None = None,
     enable_cli_override: bool = True,
+    use_namespace_prefix: bool = True,  # 是否使用命名空间前缀避免冲突
     auto_print: bool = True,  # 是否自动打印配置
     auto_print_override: bool = True,  # 是否自动打印覆盖的配置
     console: Console | None = None,  # 控制台对象，默认为 None
-    use_namespace_prefix: bool = True,  # 是否使用命名空间前缀避免冲突
+    echoa: ConflgaEchoa | None = None,  # 可选的 ConflgaEchoa 实例
 ) -> Callable[
     [Callable[Concatenate[ConflgaConfig, P], T]],  # 接收的函数类型
     Callable[P, T],  # 返回的函数类型
@@ -36,8 +38,12 @@ def conflga_main(
         enable_cli_override (bool): Whether to enable command line override functionality.
                                    When True, the decorator will parse command line arguments
                                    for configuration overrides.
+        auto_print (bool): Whether to automatically print the final configuration.
+        auto_print_override (bool): Whether to automatically print override configurations.
+        console (Optional[Console]): Rich Console instance to use for output.
         use_namespace_prefix (bool): Whether to use --conflga-override (True) to avoid conflicts
                                    or -o/--override (False) for backward compatibility.
+        echoa (Optional[ConflgaEchoa]): Optional ConflgaEchoa instance for custom output control.
 
     Example:
         @conflga_main(config_dir="conf", default_config="config", enable_cli_override=True)
@@ -53,6 +59,16 @@ def conflga_main(
     def decorator(func: Callable[Concatenate[ConflgaConfig, P], T]) -> Callable[P, T]:
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            # 获取或创建 echoa 实例
+            if echoa is not None:
+                output_echoa = echoa
+            else:
+                output_echoa = get_echoa()
+
+            # 如果提供了 console，设置到 echoa 中
+            if console is not None:
+                output_echoa.set_console(console)
+
             # Initialize configuration manager and load base configuration
             manager = ConflgaManager(config_dir=config_dir)
             manager.load_default(default_config)
@@ -70,15 +86,15 @@ def conflga_main(
                 if override_config._data:  # Check if override config has any data
                     manager.override_config(override_config)
                     if auto_print_override:
-                        override_config.pretty_print(
-                            title="Command Line Overrides", console=console
+                        output_echoa.print_config(
+                            config_data=override_config, title="Command Line Overrides"
                         )
 
             cfg = manager.get_config()
             if auto_print:
-                cfg.pretty_print(
-                    title=f"Final Configuration",
-                    console=console,
+                output_echoa.print_config(
+                    config_data=cfg,
+                    title="Final Configuration",
                     directory=config_dir,
                     files=[default_config] + (configs_to_merge or []),
                 )
