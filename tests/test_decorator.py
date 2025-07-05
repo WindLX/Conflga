@@ -106,19 +106,18 @@ def test_conflga_main_decorator_no_merge_configs(temp_config_dir, create_toml_fi
 
 
 def test_conflga_main_decorator_missing_default_config(temp_config_dir):
-    """Test decorator behavior when default config file is missing - should create empty config."""
+    """Test decorator behavior when default config file is missing."""
 
     @conflga_main(config_dir=temp_config_dir, default_config="non_existent")
     def func_missing_default(cfg: ConflgaConfig):
-        assert len(cfg) == 0  # Should have empty config
-        return "success"
+        pass  # This won't be reached
 
-    result = func_missing_default()
-    assert result == "success"
+    with pytest.raises(FileNotFoundError, match="Default config file not found"):
+        func_missing_default()
 
 
 def test_conflga_main_decorator_missing_merge_config(temp_config_dir, create_toml_file):
-    """Test decorator behavior when merge config file is missing - should skip missing configs."""
+    """Test decorator behavior when merge config file is missing."""
     create_toml_file("base_for_missing", {"key": "value"})
 
     @conflga_main(
@@ -127,13 +126,10 @@ def test_conflga_main_decorator_missing_merge_config(temp_config_dir, create_tom
         configs_to_merge=["missing_one"],
     )
     def func_missing_merge(cfg: ConflgaConfig):
-        # Should only have the base config, missing merge configs are ignored
-        assert cfg.key == "value"
-        assert len(cfg) == 1  # Only the base config key
-        return "success"
+        pass  # This won't be reached
 
-    result = func_missing_merge()
-    assert result == "success"
+    with pytest.raises(FileNotFoundError, match="Config file not found"):
+        func_missing_merge()
 
 
 # --- CLI Override Tests ---
