@@ -1,0 +1,10 @@
+[[wrapper]]
+type = "NormalizeObservation"
+kwargs = {  }
+
+[statera] # Statera配置
+path = "checkpoints/{{ exp_name }}"
+save_every_iterations = 10
+save_best_reward = true
+use_safetensors = true
+compression = "@None"

@@ -10,7 +10,6 @@ from .console import get_echoa
 class ConflgaConfig(MutableMapping):
     """
     A simple TOML-based configuration object with dot-access and merging capabilities.
-    Inspired by OmegaConf.
     """
 
     def __init__(self, initial_data: Mapping[str, Any] | None = None) -> None:
@@ -59,12 +58,21 @@ class ConflgaConfig(MutableMapping):
         return f"ConflgaConfig({self._data})"
 
     @classmethod
-    def load(cls, toml_path: str) -> "ConflgaConfig":
+    def load(cls, file_path: str) -> "ConflgaConfig":
         """
         Loads configuration from a TOML file.
         """
-        with open(toml_path, "r", encoding="utf-8") as f:
-            data = toml.load(f, none_value="@None")
+        from pathlib import Path
+
+        file_content = Path(file_path).read_text(encoding="utf-8")
+        return cls.loads(file_content)
+
+    @classmethod
+    def loads(cls, toml_string: str) -> "ConflgaConfig":
+        """
+        Loads configuration from a TOML string.
+        """
+        data = toml.loads(toml_string, none_value="@None")
         return cls._create_nested_config(data)
 
     @classmethod

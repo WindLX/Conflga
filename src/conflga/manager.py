@@ -20,39 +20,71 @@ class ConflgaManager:
         self.config_dir = Path(config_dir)
         self._config: ConflgaConfig | None = None
 
-    def load_default(self, default_config_name: str = "config") -> "ConflgaManager":
+    def load_default_file(self, default_config_name: str) -> str:
         """
-        Loads the base configuration. This should be the first config loaded.
+        Loads the base configuration file as a string.
+        This should be the first config loaded.
 
         Args:
             default_config_name (str): The name of the default TOML file (without .toml extension).
                                        Expected to be in the `config_dir`.
+
+        Returns:
+            str: The content of the default configuration file.
         """
         default_path = self.config_dir / f"{default_config_name}.toml"
         if not default_path.exists():
             raise FileNotFoundError(f"Default config file not found: {default_path}")
-        self._config = ConflgaConfig.load(str(default_path))
-        return self
+        return default_path.read_text(encoding="utf-8")
 
-    def merge_config(self, *config_names: str) -> "ConflgaManager":
+    def load_merged_file(self, *config_names: str) -> list[str]:
         """
-        Merges additional configurations on top of the current configuration.
+        Loads additional configuration files as strings.
         Later arguments override earlier ones.
 
         Args:
-            *config_names (str): Names of the TOML files to merge (without .toml extension).
+            *config_names (str): Names of the TOML files to load (without .toml extension).
                                 Expected to be in the `config_dir`.
+
+        Returns:
+            list[str]: A list of contents of the configuration files.
+        """
+        if not config_names:
+            raise ValueError("At least one config name must be provided.")
+
+        contents = []
+        for config_name in config_names:
+            config_path = self.config_dir / f"{config_name}.toml"
+            if not config_path.exists():
+                raise FileNotFoundError(f"Config file not found: {config_path}")
+            contents.append(config_path.read_text(encoding="utf-8"))
+        return contents
+
+    def load_default(self, default_config_str: str) -> "ConflgaManager":
+        """
+        Loads the base configuration from a TOML string. This should be the first config loaded.
+
+        Args:
+            default_config_str (str): The TOML string of the default configuration.
+        """
+        self._config = ConflgaConfig.loads(default_config_str)
+        return self
+
+    def merge_config(self, *config_strs: str) -> "ConflgaManager":
+        """
+        Merges additional configurations on top of the current configuration from TOML strings.
+        Later arguments override earlier ones.
+
+        Args:
+            *config_strs (str): TOML strings to merge.
         """
         if self._config is None:
             raise RuntimeError(
                 "Load a default configuration first using load_default()."
             )
 
-        for config_name in config_names:
-            config_path = self.config_dir / f"{config_name}.toml"
-            if not config_path.exists():
-                raise FileNotFoundError(f"Config file not found: {config_path}")
-            new_config = ConflgaConfig.load(str(config_path))
+        for config_str in config_strs:
+            new_config = ConflgaConfig.loads(config_str)
             self._config.merge_with(new_config)
         return self
 

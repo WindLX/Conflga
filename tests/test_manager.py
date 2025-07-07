@@ -85,6 +85,17 @@ def test_conflgaconfig_from_string():
     assert cfg.section.number == 42
 
 
+def test_conflgaconfig_loads():
+    toml_str = """
+    [section]
+    item = "data"
+    number = 42
+    """
+    cfg = ConflgaConfig.loads(toml_str)
+    assert cfg.section.item == "data"
+    assert cfg.section.number == 42
+
+
 def test_conflgaconfig_merge_with_flat():
     cfg1 = ConflgaConfig({"a": 1, "b": 2})
     cfg2 = ConflgaConfig({"b": 3, "c": 4})
@@ -145,18 +156,66 @@ def test_config_manager_init(temp_config_dir):
     assert str(manager.config_dir) == temp_config_dir
 
 
-def test_config_manager_load_default(temp_config_dir, create_toml_file):
+def test_config_manager_load_default_file(temp_config_dir, create_toml_file):
     create_toml_file("my_default", {"env": "dev"})
     manager = ConflgaManager(config_dir=temp_config_dir)
-    manager.load_default("my_default")
-    cfg = manager.get_config()
-    assert cfg.env == "dev"
+    default_content = manager.load_default_file("my_default")
+    assert 'env = "dev"' in default_content
 
 
 def test_config_manager_load_default_file_not_found(temp_config_dir):
     manager = ConflgaManager(config_dir=temp_config_dir)
     with pytest.raises(FileNotFoundError, match="Default config file not found"):
-        manager.load_default("non_existent_config")
+        manager.load_default_file("non_existent_config")
+
+
+def test_config_manager_load_merged_file(temp_config_dir, create_toml_file):
+    create_toml_file("config1", {"key1": "value1"})
+    create_toml_file("config2", {"key2": "value2"})
+    manager = ConflgaManager(config_dir=temp_config_dir)
+    contents = manager.load_merged_file("config1", "config2")
+    assert len(contents) == 2
+    assert 'key1 = "value1"' in contents[0]
+    assert 'key2 = "value2"' in contents[1]
+
+
+def test_config_manager_load_merged_file_no_names(temp_config_dir):
+    manager = ConflgaManager(config_dir=temp_config_dir)
+    with pytest.raises(ValueError, match="At least one config name must be provided"):
+        manager.load_merged_file()
+
+
+def test_config_manager_load_merged_file_not_found(temp_config_dir):
+    manager = ConflgaManager(config_dir=temp_config_dir)
+    with pytest.raises(FileNotFoundError, match="Config file not found"):
+        manager.load_merged_file("non_existent_config")
+
+
+def test_config_manager_load_default_from_string(temp_config_dir):
+    toml_str = """
+    env = "dev"
+    debug = true
+    """
+    manager = ConflgaManager(config_dir=temp_config_dir)
+    manager.load_default(toml_str)
+    cfg = manager.get_config()
+    assert cfg.env == "dev"
+    assert cfg.debug is True
+
+
+def test_config_manager_load_default_with_file(temp_config_dir, create_toml_file):
+    create_toml_file("my_default", {"env": "dev"})
+    manager = ConflgaManager(config_dir=temp_config_dir)
+    default_content = manager.load_default_file("my_default")
+    manager.load_default(default_content)
+    cfg = manager.get_config()
+    assert cfg.env == "dev"
+
+
+def test_config_manager_load_default_file_not_found_error(temp_config_dir):
+    manager = ConflgaManager(config_dir=temp_config_dir)
+    with pytest.raises(FileNotFoundError, match="Default config file not found"):
+        manager.load_default_file("non_existent_config")
 
 
 def test_config_manager_merge_config_basic(temp_config_dir, create_toml_file):
@@ -164,7 +223,30 @@ def test_config_manager_merge_config_basic(temp_config_dir, create_toml_file):
     create_toml_file("override", {"app": {"version": 2, "debug": True}})
 
     manager = ConflgaManager(config_dir=temp_config_dir)
-    manager.load_default("base").merge_config("override")
+    base_content = manager.load_default_file("base")
+    override_content = manager.load_merged_file("override")[0]
+
+    manager.load_default(base_content).merge_config(override_content)
+    cfg = manager.get_config()
+    assert cfg.app.name == "App1"
+    assert cfg.app.version == 2
+    assert cfg.app.debug is True
+
+
+def test_config_manager_merge_config_from_string(temp_config_dir):
+    base_str = """
+    [app]
+    name = "App1"
+    version = 1
+    """
+    override_str = """
+    [app]
+    version = 2
+    debug = true
+    """
+
+    manager = ConflgaManager(config_dir=temp_config_dir)
+    manager.load_default(base_str).merge_config(override_str)
     cfg = manager.get_config()
     assert cfg.app.name == "App1"
     assert cfg.app.version == 2
@@ -177,7 +259,24 @@ def test_config_manager_merge_config_multiple_files(temp_config_dir, create_toml
     create_toml_file("patch2", {"c": 5, "d": 6})
 
     manager = ConflgaManager(config_dir=temp_config_dir)
-    manager.load_default("base").merge_config("patch1", "patch2")
+    base_content = manager.load_default_file("base")
+    patch_contents = manager.load_merged_file("patch1", "patch2")
+
+    manager.load_default(base_content).merge_config(*patch_contents)
+    cfg = manager.get_config()
+    assert cfg.a == 1
+    assert cfg.b == 3
+    assert cfg.c == 5
+    assert cfg.d == 6
+
+
+def test_config_manager_merge_config_multiple_strings(temp_config_dir):
+    base_str = "a = 1\nb = 2"
+    patch1_str = "b = 3\nc = 4"
+    patch2_str = "c = 5\nd = 6"
+
+    manager = ConflgaManager(config_dir=temp_config_dir)
+    manager.load_default(base_str).merge_config(patch1_str, patch2_str)
     cfg = manager.get_config()
     assert cfg.a == 1
     assert cfg.b == 3
@@ -188,18 +287,20 @@ def test_config_manager_merge_config_multiple_files(temp_config_dir, create_toml
 def test_config_manager_merge_config_no_default_loaded(
     temp_config_dir, create_toml_file
 ):
-    create_toml_file("some_config", {"key": "value"})
     manager = ConflgaManager(config_dir=temp_config_dir)
+    config_str = 'key = "value"'
     with pytest.raises(RuntimeError, match="Load a default configuration first"):
-        manager.merge_config("some_config")
+        manager.merge_config(config_str)
 
 
-def test_config_manager_merge_config_file_not_found(temp_config_dir, create_toml_file):
-    create_toml_file("base", {"key": "value"})
+def test_config_manager_merge_config_invalid_toml(temp_config_dir):
     manager = ConflgaManager(config_dir=temp_config_dir)
-    manager.load_default("base")
-    with pytest.raises(FileNotFoundError, match="Config file not found"):
-        manager.merge_config("non_existent_merge")
+    base_str = 'key = "value"'
+    invalid_str = "invalid toml content ["
+
+    manager.load_default(base_str)
+    with pytest.raises(Exception):  # TOML parsing error
+        manager.merge_config(invalid_str)
 
 
 def test_config_manager_get_config_before_load(temp_config_dir):
@@ -215,7 +316,8 @@ def test_config_manager_override_config(temp_config_dir, create_toml_file):
     )
 
     manager = ConflgaManager(config_dir=temp_config_dir)
-    manager.load_default("base")
+    base_content = manager.load_default_file("base")
+    manager.load_default(base_content)
 
     # Create override config
     override_config = ConflgaConfig(
@@ -236,7 +338,8 @@ def test_config_manager_override_from_dict(temp_config_dir, create_toml_file):
     create_toml_file("base", {"key1": "value1", "nested": {"key2": "value2"}})
 
     manager = ConflgaManager(config_dir=temp_config_dir)
-    manager.load_default("base")
+    base_content = manager.load_default_file("base")
+    manager.load_default(base_content)
 
     # Apply override from dict
     override_dict = {"key1": "dict_override", "new_key": "new_value"}
@@ -267,7 +370,8 @@ def test_config_manager_override_from_dict_no_default_loaded(temp_config_dir):
 def test_config_manager_override_config_invalid_type(temp_config_dir, create_toml_file):
     create_toml_file("base", {"key": "value"})
     manager = ConflgaManager(config_dir=temp_config_dir)
-    manager.load_default("base")
+    base_content = manager.load_default_file("base")
+    manager.load_default(base_content)
 
     with pytest.raises(
         TypeError, match="override_config must be a ConflgaConfig instance"
@@ -284,10 +388,14 @@ def test_config_manager_chaining_with_overrides(temp_config_dir, create_toml_fil
 
     manager = ConflgaManager(config_dir=temp_config_dir)
 
+    # Load contents first
+    base_content = manager.load_default_file("base")
+    extra_content = manager.load_merged_file("extra")[0]
+
     # Chain all operations
     config = (
-        manager.load_default("base")
-        .merge_config("extra")
+        manager.load_default(base_content)
+        .merge_config(extra_content)
         .override_from_dict({"key3": "value3"})
         .override_config(ConflgaConfig({"key1": "final_override"}))
         .get_config()
@@ -296,3 +404,35 @@ def test_config_manager_chaining_with_overrides(temp_config_dir, create_toml_fil
     assert config.key1 == "final_override"
     assert config.key2 == "value2"
     assert config.key3 == "value3"
+
+
+def test_config_manager_full_workflow_with_file_operations(
+    temp_config_dir, create_toml_file
+):
+    """Test the complete workflow using file operations and string operations."""
+    # Create config files
+    create_toml_file("base", {"app": {"name": "MyApp", "version": 1}, "debug": False})
+    create_toml_file("dev", {"debug": True, "app": {"version": 2}})
+    create_toml_file("local", {"app": {"port": 3000}})
+
+    manager = ConflgaManager(config_dir=temp_config_dir)
+
+    # Load default from file
+    base_content = manager.load_default_file("base")
+
+    # Load additional configs from files
+    additional_contents = manager.load_merged_file("dev", "local")
+
+    # Build final config
+    config = (
+        manager.load_default(base_content)
+        .merge_config(*additional_contents)
+        .override_from_dict({"app": {"author": "Test Author"}})
+        .get_config()
+    )
+
+    assert config.app.name == "MyApp"
+    assert config.app.version == 2  # Overridden by dev config
+    assert config.app.port == 3000  # Added by local config
+    assert config.app.author == "Test Author"  # Added by override
+    assert config.debug is True  # Overridden by dev config

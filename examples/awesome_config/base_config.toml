@@ -1,0 +1,40 @@
+#define exp_name = "hopper_dppo" # 实验名称
+#define num_envs = 4 # 环境数量
+
+[log]
+log_dir = "runs"
+experiment_prefix = "{{ exp_name }}-{{ str(num_envs) }}"
+level = "INFO"
+
+[env] # 环境参数
+env_id = "Hopper-v5"
+obs_dim = 11
+act_dim = 3
+num_envs = "{{ num_envs }}" # 环境数量
+num_eval_envs = 1
+
+[train] # 训练超参数
+total_steps = 10_000_000
+batch_size = 64
+buffer_size = "{{ num_envs * 256 }}"
+learning_rate = 3e-4
+update_epochs = 10
+device = "cuda" # 使用GPU训练，如果没有GPU可以改为"cpu"
+
+[ppo] # PPO相关超参数
+gamma = 0.99
+gae_lambda = 0.95
+clip_range = 0.2
+value_loss_coef = 0.5
+max_grad_norm = 0.5
+normalize_advantages = true
+entropy_coef = 0.01
+target_kl = "@None"
+
+[network] # 网络结构
+hidden_dim = 256
+
+[eval] # 评估参数
+eval_epochs = 1
+eval_freq = 1
+

@@ -1,7 +1,7 @@
 [project]
 name = "conflga"
 version = "0.1.0"
-description = "Add your description here"
+description = "A simple TOML-based configuration library with dot-access and merging capabilities."
 readme = "README.md"
 authors = [
     { name = "windlx", email = "1418043337@qq.com" }
@@ -10,6 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
     "echoa",
     "rtoml>=0.12.0",
+    "simpleeval>=1.0.3",
 ]
 
 [build-system]

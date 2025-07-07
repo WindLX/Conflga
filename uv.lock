@@ -17,6 +17,7 @@ source = { editable = "." }
 dependencies = [
     { name = "echoa" },
     { name = "rtoml" },
+    { name = "simpleeval" },
 ]
 
 [package.dev-dependencies]
@@ -30,6 +31,7 @@ dev = [
 requires-dist = [
     { name = "echoa", git = "https://github.com/WindLX/Echoa.git" },
     { name = "rtoml", specifier = ">=0.12.0" },
+    { name = "simpleeval", specifier = ">=1.0.3" },
 ]
 
 [package.metadata.requires-dev]
@@ -345,6 +347,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/88/354f0f3388b38cb50a58e4abbeb364e08b7f6739f79c8a1a03f3326caaec/rtoml-0.12.0-cp313-cp313-win32.whl", hash = "sha256:7aebc94ed208ff46e6ce469ef30b98095932a3e74b99bde102a0f035d5034620", size = 220123 },
     { url = "https://files.pythonhosted.org/packages/aa/c8/8dc7e391ef6ee8967a8ac1a2c40e483d99b6c0e09c96ce0e5d4c01f88b9c/rtoml-0.12.0-cp313-cp313-win_amd64.whl", hash = "sha256:1c88e48946adef48dce2dc54f1380f6ff0d580f06770f9ca9600ef330bc06c39", size = 225143 },
     { url = "https://files.pythonhosted.org/packages/a6/40/2e8640ffe564626424aba6f1ea19f41f278e46932e5431faf8265f6e1dcb/rtoml-0.12.0-cp313-cp313-win_arm64.whl", hash = "sha256:730770673649220d4265d9986d3a9089d38434f36c1c629b98a58eb2bbee9cfb", size = 216902 },
+]
+
+[[package]]
+name = "simpleeval"
+version = "1.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/6f/15be211749430f52f2c8f0c69158a6fc961c03aac93fa28d44d1a6f5ebc7/simpleeval-1.0.3.tar.gz", hash = "sha256:67bbf246040ac3b57c29cf048657b9cf31d4e7b9d6659684daa08ca8f1e45829", size = 24358 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a0/e9/e58082fbb8cecbb6fb4133033c40cc50c248b1a331582be3a0f39138d65b/simpleeval-1.0.3-py3-none-any.whl", hash = "sha256:e3bdbb8c82c26297c9a153902d0fd1858a6c3774bf53ff4f134788c3f2035c38", size = 15762 },
 ]
 
 [[package]]

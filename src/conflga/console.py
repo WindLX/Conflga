@@ -228,3 +228,43 @@ def enable_echoa_output(enabled: bool = True) -> None:
         enabled: 是否启用输出
     """
     _default_echoa.set_enabled(enabled)
+
+
+def info(message: str) -> None:
+    """
+    打印信息级别的日志消息
+
+    Args:
+        message: 要打印的消息
+    """
+    _default_echoa.info(message)
+
+
+def warning(message: str) -> None:
+    """
+    打印警告级别的日志消息
+
+    Args:
+        message: 要打印的消息
+    """
+    _default_echoa.warning(message)
+
+
+def error(message: str) -> None:
+    """
+    打印错误级别的日志消息
+
+    Args:
+        message: 要打印的消息
+    """
+    _default_echoa.error(message)
+
+
+def debug(message: str) -> None:
+    """
+    打印调试级别的日志消息
+
+    Args:
+        message: 要打印的消息
+    """
+    _default_echoa.debug(message)
