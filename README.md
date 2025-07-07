@@ -1,6 +1,6 @@
 # Conflga
 
-一个强大、灵活且易用的Python配置管理库，受 [OmegaConf](https://omegaconf.readthedocs.io/) 启发。Conflga 提供基于TOML的配置管理解决方案，支持配置合并、命令行覆盖、模板变量预处理等高级功能。
+一个强大、灵活且易用的Python配置管理库。Conflga 提供基于TOML的配置管理解决方案，支持配置合并、命令行覆盖、模板变量预处理等高级功能。
 
 ## ✨ 核心特性
 
