@@ -278,9 +278,9 @@ def test_conflga_method_decorator_namespace_prefix(temp_config_dir, create_toml_
 def test_conflga_method_decorator_with_preprocessor(temp_config_dir):
     """Test method decorator with preprocessor enabled."""
     config_content = """
-#define BASE_LR = 0.01
-#define EPOCHS = 100
-#define BATCH_SIZE = 32
+#let BASE_LR = 0.01
+#let EPOCHS = 100
+#let BATCH_SIZE = 32
 
 [training]
 learning_rate = {{ BASE_LR }}

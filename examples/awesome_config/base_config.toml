@@ -1,5 +1,5 @@
-#define exp_name = "hopper_dppo" # 实验名称
-#define num_envs = 4 # 环境数量
+#let exp_name = "hopper_dppo" # 实验名称
+#let num_envs = 4 # 环境数量
 
 [log]
 log_dir = "runs"

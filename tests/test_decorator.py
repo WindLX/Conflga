@@ -620,10 +620,10 @@ def test_conflga_decorator_with_preprocessor_enabled(temp_config_dir, create_tom
     """Test decorator with preprocessor enabled using macros and templates."""
     # Create a config file with macros and templates
     config_content = """
-#define APP_NAME = "MyApp"
-#define VERSION = "1.0.0"
-#define PORT = 8080
-#define DEBUG = true
+#let APP_NAME = "MyApp"
+#let VERSION = "1.0.0"
+#let PORT = 8080
+#let DEBUG = true
 
 [app]
 name = "{{ APP_NAME }}"
@@ -669,8 +669,8 @@ def test_conflga_decorator_with_preprocessor_disabled(temp_config_dir):
     """Test decorator with preprocessor disabled - macros should remain as strings."""
     # Create a config file with macros and templates
     config_content = """
-#define APP_NAME = "MyApp"
-#define PORT = 8080
+#let APP_NAME = "MyApp"
+#let PORT = 8080
 
 [app]
 name = "{{ APP_NAME }}"
@@ -704,9 +704,9 @@ def test_conflga_decorator_preprocessor_with_merge_configs(temp_config_dir):
     """Test decorator with preprocessor enabled and multiple config files."""
     # Base config with macros
     base_content = """
-#define BASE_URL = "https://api.example.com"
-#define VERSION = "v1"
-#define TIMEOUT = 30
+#let BASE_URL = "https://api.example.com"
+#let VERSION = "v1"
+#let TIMEOUT = 30
 
 [api]
 base_url = "{{ BASE_URL }}"
@@ -716,8 +716,8 @@ timeout = {{ TIMEOUT }}
 
     # Override config with macros that reference base values
     override_content = """
-#define RETRY_COUNT = 3
-#define TOTAL_TIMEOUT = TIMEOUT * RETRY_COUNT
+#let RETRY_COUNT = 3
+#let TOTAL_TIMEOUT = TIMEOUT * RETRY_COUNT
 
 [api]
 retries = {{ RETRY_COUNT }}
@@ -768,8 +768,8 @@ enabled = {{ TIMEOUT > 10 }}
 def test_conflga_decorator_preprocessor_with_cli_override(temp_config_dir):
     """Test decorator with preprocessor and CLI overrides combined."""
     config_content = """
-#define DEFAULT_PORT = 8080
-#define DEBUG_MODE = false
+#let DEFAULT_PORT = 8080
+#let DEBUG_MODE = false
 
 [server]
 port = {{ DEFAULT_PORT }}
@@ -816,11 +816,11 @@ port = {{ DEFAULT_PORT + 1 }}
 def test_conflga_decorator_preprocessor_complex_expressions(temp_config_dir):
     """Test decorator with preprocessor using complex expressions."""
     config_content = """
-#define WORKERS = 4
-#define BASE_MEMORY = 512
-#define MEMORY_PER_WORKER = BASE_MEMORY * 2
-#define TOTAL_MEMORY = MEMORY_PER_WORKER * WORKERS
-#define HIGH_MEMORY = TOTAL_MEMORY > 2000
+#let WORKERS = 4
+#let BASE_MEMORY = 512
+#let MEMORY_PER_WORKER = BASE_MEMORY * 2
+#let TOTAL_MEMORY = MEMORY_PER_WORKER * WORKERS
+#let HIGH_MEMORY = TOTAL_MEMORY > 2000
 
 [system]
 workers = {{ WORKERS }}
@@ -869,10 +869,10 @@ memory_limit = "{{ TOTAL_MEMORY }}MB"
 def test_conflga_decorator_preprocessor_string_operations(temp_config_dir):
     """Test decorator with preprocessor using string operations."""
     config_content = """
-#define SERVICE_NAME = "api"
-#define ENVIRONMENT = "prod"
-#define NAMESPACE = SERVICE_NAME + "-" + ENVIRONMENT
-#define IMAGE_TAG = "v1.2.3"
+#let SERVICE_NAME = "api"
+#let ENVIRONMENT = "prod"
+#let NAMESPACE = SERVICE_NAME + "-" + ENVIRONMENT
+#let IMAGE_TAG = "v1.2.3"
 
 [deployment]
 name = "{{ NAMESPACE }}"
@@ -920,7 +920,7 @@ def test_conflga_decorator_preprocessor_error_handling(temp_config_dir):
     """Test decorator with preprocessor error handling."""
     # Config with invalid macro
     invalid_config_content = """
-#define INVALID = undefined_variable + 1
+#let INVALID = undefined_variable + 1
 
 [test]
 value = {{ INVALID }}
@@ -969,9 +969,9 @@ def test_conflga_decorator_preprocessor_empty_config(temp_config_dir):
 def test_conflga_decorator_preprocessor_only_macros_no_templates(temp_config_dir):
     """Test decorator with preprocessor when config has only macros but no templates."""
     config_content = """
-#define PORT = 8080
-#define DEBUG = true
-#define NAME = "test"
+#let PORT = 8080
+#let DEBUG = true
+#let NAME = "test"
 
 [server]
 port = 3000

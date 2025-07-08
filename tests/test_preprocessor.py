@@ -9,10 +9,10 @@ class TestConflgaPreprocessor:
         """测试简单的宏定义解析"""
         preprocessor = ConflgaPreprocessor()
         text = """
-#define PORT = 8080
-#define HOST = "localhost"
-#define DEBUG = True
-#define ENABLED = true
+#let PORT = 8080
+#let HOST = "localhost"
+#let DEBUG = True
+#let ENABLED = true
 """
         preprocessor._parse_macros(text)
         assert preprocessor.conflga_vars["PORT"] == 8080
@@ -24,10 +24,10 @@ class TestConflgaPreprocessor:
         """测试包含表达式的宏定义"""
         preprocessor = ConflgaPreprocessor()
         text = """
-#define BASE_PORT = 8000
-#define API_PORT = BASE_PORT + 80
-#define WEB_PORT = BASE_PORT + 3000
-#define TOTAL_PORTS = API_PORT + WEB_PORT
+#let BASE_PORT = 8000
+#let API_PORT = BASE_PORT + 80
+#let WEB_PORT = BASE_PORT + 3000
+#let TOTAL_PORTS = API_PORT + WEB_PORT
 """
         preprocessor._parse_macros(text)
         assert preprocessor.conflga_vars["BASE_PORT"] == 8000
@@ -39,9 +39,9 @@ class TestConflgaPreprocessor:
         """测试字符串操作的宏定义"""
         preprocessor = ConflgaPreprocessor()
         text = """
-#define APP_NAME = "MyApp"
-#define VERSION = "1.0"
-#define FULL_NAME = APP_NAME + " v" + VERSION
+#let APP_NAME = "MyApp"
+#let VERSION = "1.0"
+#let FULL_NAME = APP_NAME + " v" + VERSION
 """
         preprocessor._parse_macros(text)
         assert preprocessor.conflga_vars["APP_NAME"] == "MyApp"
@@ -51,7 +51,7 @@ class TestConflgaPreprocessor:
     def test_parse_macros_invalid_expression(self):
         """测试无效表达式的宏定义"""
         preprocessor = ConflgaPreprocessor()
-        text = "#define INVALID = undefined_var"
+        text = "#let INVALID = undefined_var"
 
         with pytest.raises(RuntimeError, match="Marcos compute failed"):
             preprocessor._parse_macros(text)
@@ -60,9 +60,9 @@ class TestConflgaPreprocessor:
         """测试宏定义的顺序依赖性"""
         preprocessor = ConflgaPreprocessor()
         text = """
-#define A = 10
-#define B = A * 2
-#define C = B + A
+#let A = 10
+#let B = A * 2
+#let C = B + A
 """
         preprocessor._parse_macros(text)
         assert preprocessor.conflga_vars["A"] == 10
@@ -125,10 +125,10 @@ class TestConflgaPreprocessor:
         """测试完整的预处理工作流程"""
         preprocessor = ConflgaPreprocessor()
         toml_text = """
-#define APP_NAME = "MyApp"
-#define VERSION = "1.0.0"
-#define PORT = 8080
-#define WORKERS = 4
+#let APP_NAME = "MyApp"
+#let VERSION = "1.0.0"
+#let PORT = 8080
+#let WORKERS = 4
 
 [app]
 name = "{{ APP_NAME }}"
@@ -163,19 +163,19 @@ max_connections = 40
         """测试预处理过程中移除宏定义行"""
         preprocessor = ConflgaPreprocessor()
         toml_text = """
-#define DEBUG = True
+#let DEBUG = True
 # This is a comment
 config = {{ DEBUG }}
-#define ANOTHER = "value"
+#let ANOTHER = "value"
 another_config = "{{ ANOTHER }}"
 """
 
         result = preprocessor.preprocess_text(toml_text)
         lines = result.strip().split("\n")
 
-        # 确保没有 #define 行
+        # 确保没有 #let 行
         for line in lines:
-            assert not line.strip().startswith("#define")
+            assert not line.strip().startswith("#let")
 
         # 确保配置行被正确处理
         assert "config = true" in result
@@ -186,10 +186,10 @@ another_config = "{{ ANOTHER }}"
         """测试复杂表达式的预处理"""
         preprocessor = ConflgaPreprocessor()
         toml_text = """
-#define BASE_URL = "https://api.example.com"
-#define VERSION = "v1"
-#define TIMEOUT = 30
-#define RETRY_COUNT = 3
+#let BASE_URL = "https://api.example.com"
+#let VERSION = "v1"
+#let TIMEOUT = 30
+#let RETRY_COUNT = 3
 
 [api]
 endpoint = "{{ BASE_URL }}/{{ VERSION }}"
@@ -247,14 +247,14 @@ host = "localhost"
         pattern = ConflgaPreprocessor.MACRO_PATTERN
 
         # 测试有效的宏定义
-        assert pattern.match("#define VAR = 123")
-        assert pattern.match("#define VAR=123")
-        assert pattern.match("#define VAR_NAME = 'value'")
-        assert pattern.match("   #define SPACED = True   ")
+        assert pattern.match("#let VAR = 123")
+        assert pattern.match("#let VAR=123")
+        assert pattern.match("#let VAR_NAME = 'value'")
+        assert pattern.match("   #let SPACED = True   ")
 
         # 测试无效的宏定义
         assert not pattern.match("define VAR = 123")  # 缺少 #
-        assert not pattern.match("#define")  # 不完整
+        assert not pattern.match("#let")  # 不完整
         assert not pattern.match("# define VAR = 123")  # 空格在错误位置
 
     def test_template_pattern_regex(self):
@@ -277,8 +277,8 @@ host = "localhost"
         preprocessor1 = ConflgaPreprocessor()
         preprocessor2 = ConflgaPreprocessor()
 
-        preprocessor1._parse_macros("#define VAR1 = 123")
-        preprocessor2._parse_macros("#define VAR2 = 456")
+        preprocessor1._parse_macros("#let VAR1 = 123")
+        preprocessor2._parse_macros("#let VAR2 = 456")
 
         assert "VAR1" in preprocessor1.conflga_vars
         assert "VAR1" not in preprocessor2.conflga_vars
@@ -290,7 +290,7 @@ host = "localhost"
         preprocessor = ConflgaPreprocessor()
         toml_text = """
 
-#define SPACED = 123
+#let SPACED = 123
 
 
 config = {{ SPACED }}
@@ -319,9 +319,9 @@ config = {{ SPACED }}
         """测试嵌套和复杂的表达式（受 simple_eval 限制）"""
         preprocessor = ConflgaPreprocessor()
         text = """
-#define BASE_VALUE = 10
-#define MULTIPLIER = 3
-#define RESULT = BASE_VALUE * MULTIPLIER
+#let BASE_VALUE = 10
+#let MULTIPLIER = 3
+#let RESULT = BASE_VALUE * MULTIPLIER
 """
         preprocessor._parse_macros(text)
 
@@ -338,10 +338,10 @@ config = {{ SPACED }}
         """测试布尔值和比较操作"""
         preprocessor = ConflgaPreprocessor()
         text = """
-#define DEBUG = True
-#define PORT = 8080
-#define IS_DEV = PORT == 8080
-#define IS_PROD = not IS_DEV
+#let DEBUG = True
+#let PORT = 8080
+#let IS_DEV = PORT == 8080
+#let IS_PROD = not IS_DEV
 """
         preprocessor._parse_macros(text)
 
@@ -358,9 +358,9 @@ config = {{ SPACED }}
         """测试基本名称的支持"""
         preprocessor = ConflgaPreprocessor()
         text = """
-#define ENABLED = true
-#define DISABLED = false
-#define NOTHING = null
+#let ENABLED = true
+#let DISABLED = false
+#let NOTHING = null
 """
         preprocessor._parse_macros(text)
 

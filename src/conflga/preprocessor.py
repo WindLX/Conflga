@@ -6,7 +6,7 @@ from .console import debug
 
 
 class ConflgaPreprocessor:
-    MACRO_PATTERN = re.compile(r"^\s*#define\s+(\w+)\s*=\s*(.+)")
+    MACRO_PATTERN = re.compile(r"^\s*#let\s+(\w+)\s*=\s*(.+)")
     TEMPLATE_PATTERN = re.compile(r"\{\{([^}]+)\}\}")
 
     def __init__(self):
@@ -24,7 +24,7 @@ class ConflgaPreprocessor:
 
     def _parse_macros(self, text: str) -> None:
         """
-        解析并计算所有 #define 宏定义。
+        解析并计算所有 #let 宏定义。
         支持变量引用（先后顺序敏感）
         """
         lines = text.splitlines()

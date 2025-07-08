@@ -36,8 +36,8 @@ pip install conflga
 
 **base_config.toml**:
 ```toml
-#define exp_name = "hopper_dppo"
-#define num_envs = 4
+#let exp_name = "hopper_dppo"
+#let num_envs = 4
 
 [log]
 log_dir = "runs"
@@ -231,11 +231,11 @@ Conflga 支持强大的模板预处理功能，允许在配置文件中使用宏
 
 ```toml
 # 定义宏变量
-#define SERVICE_NAME = "api"
-#define ENVIRONMENT = "prod"
-#define WORKERS = 4
-#define BASE_MEMORY = 512
-#define MEMORY_PER_WORKER = BASE_MEMORY * 2
+#let SERVICE_NAME = "api"
+#let ENVIRONMENT = "prod"
+#let WORKERS = 4
+#let BASE_MEMORY = 512
+#let MEMORY_PER_WORKER = BASE_MEMORY * 2
 
 [app]
 name = "{{ SERVICE_NAME }}-service"
