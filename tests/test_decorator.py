@@ -2,11 +2,9 @@ import pytest
 import rtoml as toml
 import os
 import tempfile
-import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from conflga import ConflgaConfig, conflga_entry
-from conflga.cli import ConflgaCLI
+from conflga import ConflgaConfig, conflga_func
 
 
 @pytest.fixture
@@ -41,7 +39,7 @@ def test_conflga_main_decorator_basic(temp_config_dir, create_toml_file):
 
     with patch("sys.argv", ["test_script.py"]):  # Mock clean command line
 
-        @conflga_entry(config_dir=temp_config_dir, default_config="base_cfg")
+        @conflga_func(config_dir=temp_config_dir, default_config="base_cfg")
         def decorated_func(cfg: ConflgaConfig):
             return cfg.test_val
 
@@ -56,7 +54,7 @@ def test_conflga_main_decorator_with_merge(temp_config_dir, create_toml_file):
 
     with patch("sys.argv", ["test_script.py"]):  # Mock clean command line
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="main_cfg",
             configs_to_merge=["exp_cfg"],
@@ -76,7 +74,7 @@ def test_conflga_main_decorator_passes_other_args(temp_config_dir, create_toml_f
 
     with patch("sys.argv", ["test_script.py"]):  # Mock clean command line
 
-        @conflga_entry(config_dir=temp_config_dir, default_config="arg_cfg")
+        @conflga_func(config_dir=temp_config_dir, default_config="arg_cfg")
         def decorated_func_with_args(cfg: ConflgaConfig, x: int, y: str = "default"):
             return cfg.val + x, y
 
@@ -91,7 +89,7 @@ def test_conflga_main_decorator_no_merge_configs(temp_config_dir, create_toml_fi
 
     with patch("sys.argv", ["test_script.py"]):  # Mock clean command line
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="simple_cfg",
             configs_to_merge=None,
@@ -108,7 +106,7 @@ def test_conflga_main_decorator_no_merge_configs(temp_config_dir, create_toml_fi
 def test_conflga_main_decorator_missing_default_config(temp_config_dir):
     """Test decorator behavior when default config file is missing."""
 
-    @conflga_entry(config_dir=temp_config_dir, default_config="non_existent")
+    @conflga_func(config_dir=temp_config_dir, default_config="non_existent")
     def func_missing_default(cfg: ConflgaConfig):
         pass  # This won't be reached
 
@@ -120,7 +118,7 @@ def test_conflga_main_decorator_missing_merge_config(temp_config_dir, create_tom
     """Test decorator behavior when merge config file is missing."""
     create_toml_file("base_for_missing", {"key": "value"})
 
-    @conflga_entry(
+    @conflga_func(
         config_dir=temp_config_dir,
         default_config="base_for_missing",
         configs_to_merge=["missing_one"],
@@ -141,7 +139,7 @@ def test_conflga_main_decorator_cli_override_disabled(
     """Test decorator with CLI override disabled."""
     create_toml_file("base_cfg", {"model": {"lr": 0.01}, "epochs": 10})
 
-    @conflga_entry(
+    @conflga_func(
         config_dir=temp_config_dir, default_config="base_cfg", enable_cli_override=False
     )
     def func_no_cli(cfg: ConflgaConfig):
@@ -161,7 +159,7 @@ def test_conflga_main_decorator_cli_override_enabled_no_args(
 
     with patch("sys.argv", ["test_script.py"]):  # No override args
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="base_cfg",
             enable_cli_override=True,
@@ -196,7 +194,7 @@ def test_conflga_main_decorator_cli_override_with_args(
         ],
     ):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="base_cfg",
             enable_cli_override=True,
@@ -233,7 +231,7 @@ def test_conflga_main_decorator_cli_override_complex_values(
         ],
     ):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="base_cfg",
             enable_cli_override=True,
@@ -259,7 +257,7 @@ def test_conflga_main_decorator_cli_override_with_merge(
         "sys.argv", ["test_script.py", "-o", "model.lr=0.001", "-o", "epochs=200"]
     ):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="base_cfg",
             configs_to_merge=["exp_cfg"],
@@ -302,7 +300,7 @@ def test_conflga_main_decorator_nested_overrides(temp_config_dir, create_toml_fi
         ],
     ):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="nested_cfg",
             enable_cli_override=True,
@@ -332,7 +330,7 @@ def test_conflga_main_decorator_preserves_function_metadata(
     """Test that decorator preserves function metadata."""
     create_toml_file("meta_cfg", {"value": 42})
 
-    @conflga_entry(config_dir=temp_config_dir, default_config="meta_cfg")
+    @conflga_func(config_dir=temp_config_dir, default_config="meta_cfg")
     def documented_function(cfg: ConflgaConfig):
         """This is a documented function."""
         return cfg.value
@@ -347,7 +345,7 @@ def test_conflga_main_decorator_with_kwargs(temp_config_dir, create_toml_file):
 
     with patch("sys.argv", ["test_script.py"]):  # Mock clean command line
 
-        @conflga_entry(config_dir=temp_config_dir, default_config="kwargs_cfg")
+        @conflga_func(config_dir=temp_config_dir, default_config="kwargs_cfg")
         def func_with_kwargs(cfg: ConflgaConfig, multiplier: int = 1, **kwargs):
             return cfg.base_value * multiplier, kwargs
 
@@ -362,7 +360,7 @@ def test_conflga_main_decorator_with_args_and_kwargs(temp_config_dir, create_tom
 
     with patch("sys.argv", ["test_script.py"]):  # Mock clean command line
 
-        @conflga_entry(config_dir=temp_config_dir, default_config="flexible_cfg")
+        @conflga_func(config_dir=temp_config_dir, default_config="flexible_cfg")
         def flexible_func(cfg: ConflgaConfig, *args, **kwargs):
             return cfg.multiplier, args, kwargs
 
@@ -390,7 +388,7 @@ def test_conflga_main_decorator_namespace_prefix_parameter(
         ],
     ):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="base_cfg",
             enable_cli_override=True,
@@ -416,7 +414,7 @@ def test_conflga_main_decorator_backward_compatibility_parameter(
         ["test_script.py", "-o", "model.lr=0.001", "-o", "epochs=100"],
     ):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="base_cfg",
             enable_cli_override=True,
@@ -445,17 +443,17 @@ def test_conflga_main_decorator_multiple_functions(temp_config_dir, create_toml_
     with patch("sys.argv", ["test_script.py"]):  # Mock clean command line
 
         # First function using the decorator
-        @conflga_entry(config_dir=temp_config_dir, default_config="multi_cfg")
+        @conflga_func(config_dir=temp_config_dir, default_config="multi_cfg")
         def train_model(cfg: ConflgaConfig):
             return cfg.model.lr, cfg.epochs, cfg.batch_size
 
         # Second function using the same decorator
-        @conflga_entry(config_dir=temp_config_dir, default_config="multi_cfg")
+        @conflga_func(config_dir=temp_config_dir, default_config="multi_cfg")
         def prepare_data(cfg: ConflgaConfig):
             return cfg.data.path, cfg.data.augment, cfg.batch_size
 
         # Third function with additional arguments
-        @conflga_entry(config_dir=temp_config_dir, default_config="multi_cfg")
+        @conflga_func(config_dir=temp_config_dir, default_config="multi_cfg")
         def evaluate_model(cfg: ConflgaConfig, model_name: str = "default"):
             return cfg.model.dropout, cfg.epochs, model_name
 
@@ -503,7 +501,7 @@ def test_conflga_main_decorator_multiple_functions_with_cli_override(
         ],
     ):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="multi_override_cfg",
             enable_cli_override=True,
@@ -512,7 +510,7 @@ def test_conflga_main_decorator_multiple_functions_with_cli_override(
         def function_one(cfg: ConflgaConfig):
             return cfg.model.lr, cfg.epochs
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="multi_override_cfg",
             enable_cli_override=True,
@@ -540,11 +538,11 @@ def test_conflga_main_decorator_multiple_functions_different_configs(
 
     with patch("sys.argv", ["test_script.py"]):  # Mock clean command line
 
-        @conflga_entry(config_dir=temp_config_dir, default_config="config_a")
+        @conflga_func(config_dir=temp_config_dir, default_config="config_a")
         def use_config_a(cfg: ConflgaConfig):
             return cfg.model, cfg.lr
 
-        @conflga_entry(config_dir=temp_config_dir, default_config="config_b")
+        @conflga_func(config_dir=temp_config_dir, default_config="config_b")
         def use_config_b(cfg: ConflgaConfig):
             return cfg.model, cfg.lr, cfg.hidden_size
 
@@ -575,15 +573,15 @@ def test_conflga_main_decorator_multiple_functions_concurrent_calls(
 
     with patch("sys.argv", ["test_script.py"]):  # Mock clean command line
 
-        @conflga_entry(config_dir=temp_config_dir, default_config="concurrent_cfg")
+        @conflga_func(config_dir=temp_config_dir, default_config="concurrent_cfg")
         def first_function(cfg: ConflgaConfig):
             return cfg.global_setting, cfg.func1.value
 
-        @conflga_entry(config_dir=temp_config_dir, default_config="concurrent_cfg")
+        @conflga_func(config_dir=temp_config_dir, default_config="concurrent_cfg")
         def second_function(cfg: ConflgaConfig):
             return cfg.global_setting, cfg.func2.value
 
-        @conflga_entry(config_dir=temp_config_dir, default_config="concurrent_cfg")
+        @conflga_func(config_dir=temp_config_dir, default_config="concurrent_cfg")
         def third_function(cfg: ConflgaConfig):
             return cfg.global_setting, cfg.func3.value
 
@@ -644,7 +642,7 @@ host = "localhost:{{ PORT }}"
 
     with patch("sys.argv", ["test_script.py"]):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="macro_config",
             enable_preprocessor=True,
@@ -687,7 +685,7 @@ port = "{{ PORT }}"
 
     with patch("sys.argv", ["test_script.py"]):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="raw_config",
             enable_preprocessor=False,
@@ -739,7 +737,7 @@ enabled = {{ TIMEOUT > 10 }}
 
     with patch("sys.argv", ["test_script.py"]):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="base",
             configs_to_merge=["override"],
@@ -797,7 +795,7 @@ port = {{ DEFAULT_PORT + 1 }}
         ],
     ):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="cli_test",
             enable_preprocessor=True,
@@ -841,7 +839,7 @@ memory_limit = "{{ TOTAL_MEMORY }}MB"
 
     with patch("sys.argv", ["test_script.py"]):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="complex",
             enable_preprocessor=True,
@@ -893,7 +891,7 @@ version = "{{ IMAGE_TAG }}"
 
     with patch("sys.argv", ["test_script.py"]):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="strings",
             enable_preprocessor=True,
@@ -932,7 +930,7 @@ value = {{ INVALID }}
     with open(config_path, "w", encoding="utf-8") as f:
         f.write(invalid_config_content)
 
-    @conflga_entry(
+    @conflga_func(
         config_dir=temp_config_dir,
         default_config="invalid",
         enable_preprocessor=True,
@@ -955,7 +953,7 @@ def test_conflga_decorator_preprocessor_empty_config(temp_config_dir):
 
     with patch("sys.argv", ["test_script.py"]):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="empty",
             enable_preprocessor=True,
@@ -987,7 +985,7 @@ name = "actual"
 
     with patch("sys.argv", ["test_script.py"]):
 
-        @conflga_entry(
+        @conflga_func(
             config_dir=temp_config_dir,
             default_config="no_templates",
             enable_preprocessor=True,
@@ -1014,7 +1012,7 @@ port = "{{ UNDEFINED_PORT }}"
     with open(config_path, "w", encoding="utf-8") as f:
         f.write(config_content)
 
-    @conflga_entry(
+    @conflga_func(
         config_dir=temp_config_dir,
         default_config="undefined_templates",
         enable_preprocessor=True,

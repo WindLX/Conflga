@@ -86,10 +86,36 @@ compression = "@None"
 
 **quick_start.py**:
 ```python
-from conflga import conflga_entry, ConflgaConfig
+from conflga import conflga_func, conflga_method, ConflgaConfig
 from conflga.console import info
 
-@conflga_entry(
+
+class MyAwesomeTraining:
+    """
+    A class representing an awesome training session.
+    This class can be decorated with `conflga_method` to automatically load configurations.
+    """
+
+    @conflga_method(
+        config_dir="examples/awesome_config",
+        default_config="base_config",
+        configs_to_merge=["other_config"],
+        enable_preprocessor=True,
+        enable_cli_override=True,
+        use_namespace_prefix=True,
+        auto_print=True,
+        auto_print_override=True,
+    )
+    def train(self, cfg: ConflgaConfig):
+        """
+        Train the model using the provided configuration.
+        The configuration will be printed automatically due to auto_print=True.
+        """
+        info("Training started with the following configuration:")
+        info(f"\n{cfg.to_dict()}")
+
+
+@conflga_func(
     config_dir="examples/awesome_config",
     default_config="base_config",
     configs_to_merge=["other_config"],
@@ -101,15 +127,17 @@ from conflga.console import info
 )
 def main(cfg: ConflgaConfig):
     """
-    主函数，将自动加载和打印配置
+    Main function that will be executed with the configuration loaded.
+    The configuration will be printed automatically due to auto_print=True.
     """
-    info("配置加载成功!")
-    info(f"实验名称: {cfg.log.experiment_prefix}")
-    info(f"环境数量: {cfg.env.num_envs}")
-    info(f"缓冲区大小: {cfg.train.buffer_size}")
+    info("Configuration loaded successfully!")
+    info(f"\n{cfg.to_dict()}")
+
 
 if __name__ == "__main__":
-    main()
+    main()  # This will run the main function with the loaded configuration
+    training_session = MyAwesomeTraining()
+    training_session.train()  # This will run the train method with the loaded configuration
 ```
 
 ### 3. 运行程序
@@ -257,7 +285,9 @@ config.pretty_print(
 
 ## 🎯 装饰器参数详解
 
-`@conflga_entry` 装饰器支持以下参数：
+Conflga 提供了两个装饰器：`conflga_func` 和 `conflga_method`，`conflga_func` 用于函数或者静态方法装饰，`conflga_method` 用于实例方法或类方法装饰。它们的主要区别在于处理方式和适用场景。
+
+`@conflga_func` 和 `@conflga_method` 装饰器支持以下参数：
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -271,6 +301,7 @@ config.pretty_print(
 | `auto_print_override` | `bool` | `True` | 是否自动打印覆盖配置 |
 | `console` | `Console` | `None` | Rich控制台对象 |
 | `echoa` | `ConflgaEchoa` | `None` | 自定义输出管理器 |
+
 
 ## 💡 命令行覆盖语法
 
@@ -315,7 +346,7 @@ Conflga 提供多种方式避免与其他工具的命令行参数冲突：
 ### 1. 使用命名空间前缀（推荐）
 
 ```python
-@conflga_entry(use_namespace_prefix=True)  # 使用 -co/--conflga-override
+@conflga_func(use_namespace_prefix=True)  # 使用 -co/--conflga-override
 def main(cfg):
     pass
 ```
@@ -323,7 +354,7 @@ def main(cfg):
 ### 2. 使用短选项
 
 ```python
-@conflga_entry(use_namespace_prefix=False)  # 使用 -o/--override
+@conflga_func(use_namespace_prefix=False)  # 使用 -o/--override
 def main(cfg):
     pass
 ```
@@ -346,7 +377,7 @@ conflga/
 │   ├── __init__.py         # 主要导出
 │   ├── config.py           # ConflgaConfig 核心配置类
 │   ├── manager.py          # ConflgaManager 配置管理器
-│   ├── decorator.py        # conflga_entry 装饰器
+│   ├── decorator.py        # conflga_func 和 conflga_method 装饰器
 │   ├── cli.py              # 命令行接口
 │   ├── console.py          # 美观输出功能
 │   └── preprocessor.py     # 模板预处理器

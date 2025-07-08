@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A simple TOML-based configuration library with dot-access and merging capabilities."
 readme = "README.md"
 authors = [
-    { name = "windlx", email = "1418043337@qq.com" }
+    { name = "windlx", email = "windlxt@outlook.com" }
 ]
 requires-python = ">=3.10"
 dependencies = [
