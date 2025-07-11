@@ -21,13 +21,13 @@
 ### 使用 uv (推荐)
 
 ```bash
-uv add conflga
+uv add git+https://github.com/WindLX/Conflga.git
 ```
 
 ### 使用 pip
 
 ```bash
-pip install conflga
+pip install git+https://github.com/WindLX/Conflga.git
 ```
 
 ## 🚀 快速开始

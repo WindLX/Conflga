@@ -1,5 +1,5 @@
 [project]
-name = "conflga-toml"
+name = "conflga"
 version = "0.1.0"
 description = "A simple TOML-based configuration library with dot-access and merging capabilities."
 readme = "README.md"

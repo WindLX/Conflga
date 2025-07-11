@@ -21,13 +21,13 @@ A powerful, flexible, and easy-to-use Python configuration management library. C
 ### Using uv (Recommended)
 
 ```bash
-uv add conflga
+uv add git+https://github.com/WindLX/Conflga.git
 ```
 
 ### Using pip
 
 ```bash
-pip install conflga
+pip install git+https://github.com/WindLX/Conflga.git
 ```
 
 ## 🚀 Quick Start
