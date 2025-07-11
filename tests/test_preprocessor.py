@@ -244,7 +244,7 @@ host = "localhost"
 
     def test_macro_pattern_regex(self):
         """测试宏定义的正则表达式模式"""
-        pattern = ConflgaPreprocessor.MACRO_PATTERN
+        pattern = ConflgaPreprocessor._macro_pattern
 
         # 测试有效的宏定义
         assert pattern.match("#let VAR = 123")
@@ -259,7 +259,7 @@ host = "localhost"
 
     def test_template_pattern_regex(self):
         """测试模板表达式的正则表达式模式"""
-        pattern = ConflgaPreprocessor.TEMPLATE_PATTERN
+        pattern = ConflgaPreprocessor._template_pattern
 
         # 测试有效的模板表达式
         assert pattern.search("{{ var }}")

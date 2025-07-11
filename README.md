@@ -259,6 +259,53 @@ connection_string = "postgresql://user:pass@{{ SERVICE_NAME }}-db:5432/{{ SERVIC
 - 布尔值：`{{ true }}`, `{{ false }}`
 - 空值：`{{ null }}`, `{{ @None }}`
 
+#### 内置函数
+
+Conflga 内置了常用的数学、随机数和类型转换相关函数，方便在表达式或脚本中调用。
+
+包含的函数及其说明如下：
+
+数学计算:
+- `abs(x)`: 返回 x 的绝对值。
+- `max(*args)`: 返回参数中的最大值。
+- `min(*args)`: 返回参数中的最小值。
+- `pow(x, y)`: 返回 x 的 y 次幂。
+- `round(x, n)`: 对 x 四舍五入，保留 n 位小数。
+- `sqrt(x)`: 返回 x 的平方根。
+- `log(x)`: 返回 x 的自然对数（以 e 为底）。
+- `log10(x)`: 返回 x 的以 10 为底的对数。
+- `exp(x)`: 返回 e 的 x 次幂。
+- `sin(x)`: 返回 x 的正弦值（x 为弧度）。
+- `cos(x)`: 返回 x 的余弦值（x 为弧度）。
+- `tan(x)`: 返回 x 的正切值（x 为弧度）。
+- `asin(x)`: 返回 x 的反正弦值（结果为弧度）。
+- `acos(x)`: 返回 x 的反余弦值（结果为弧度）。
+- `atan(x)`: 返回 x 的反正切值（结果为弧度）。
+- `degrees(x)`: 将弧度 x 转换为角度。
+- `radians(x)`: 将角度 x 转换为弧度。
+- `tanh(x)`: 返回 x 的双曲正切值。
+- `ceil(x)`: 返回大于等于 x 的最小整数。
+- `floor(x)`: 返回小于等于 x 的最大整数。
+- `gcd(x, y)`: 返回 x 和 y 的最大公约数。
+- `lcm(x, y)`: 返回 x 和 y 的最小公倍数。
+
+随机数:
+- `random()`: 生成 0 到 1 之间的随机浮点数。
+- `randint(a, b)`: 生成指定范围 [a, b] 内的随机整数。
+- `normal(mu, sigma)`: 生成正态分布随机数，mu 为均值，sigma 为标准差。
+- `uniform(a, b)`: 生成指定范围 [a, b] 内的随机浮点数。
+- `choice(seq)`: 从序列 seq 中随机选择一个元素。
+- `shuffle(seq)`: 打乱序列 seq 的顺序，返回打乱后的序列。
+
+类型与数据结构:
+- `len(obj)`: 返回对象 obj 的长度。
+- `str(x)`: 将 x 转换为字符串。
+- `int(x)`: 将 x 转换为整数。
+- `float(x)`: 将 x 转换为浮点数。
+- `range(*args)`: 返回一个范围对象，Python 的 range 函数。
+- `sum(iterable)`: 返回可迭代对象 iterable 中所有元素的和。
+
+
 ### 美观输出
 
 ```python
