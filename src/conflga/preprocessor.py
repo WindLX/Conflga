@@ -112,7 +112,11 @@ class ConflgaPreprocessor:
             after = line[end] if end < len(line) else ""
             try:
                 eval_names = {**self.base_names, **self.conflga_vars}
-                result = simple_eval(expr, names=eval_names)
+                result = simple_eval(
+                    expr,
+                    names=eval_names,
+                    functions=self._custom_functions,
+                )
                 # TOML 布尔值小写
                 if isinstance(result, bool):
                     result_str = str(result).lower()
