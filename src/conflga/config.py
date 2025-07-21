@@ -18,6 +18,19 @@ class ConflgaConfig(MutableMapping):
             for k, v in initial_data.items():
                 self._data[k] = self._create_nested_config(v)
 
+    def __getstate__(self) -> dict[str, Any]:
+        """
+        告诉pickle如何序列化这个对象。
+        我们只返回核心的、可序列化的 _data 成员。
+        """
+        return {"_data": self._data}
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        """
+        告诉pickle如何根据state重建这个对象。
+        """
+        self._data = state.get("_data", {})
+
     def __getattr__(self, key: str) -> Any:
         try:
             return self._data[key]
