@@ -7,7 +7,7 @@ from .preprocessor import ConflgaPreprocessor
 from .manager import ConflgaManager
 from .config import ConflgaConfig
 from .cli import ConflgaCLI
-from .console import get_echoa, ConflgaEchoa
+from .console import get_console
 
 ParamType = ParamSpec("ParamType")  # ParamType 代表装饰后函数所接受的参数
 ReturnType = TypeVar("ReturnType")  # ReturnType 代表原始函数的返回类型
@@ -24,7 +24,6 @@ def conflga_func(
     auto_print: bool = True,  # 是否自动打印配置
     auto_print_override: bool = True,  # 是否自动打印覆盖的配置
     console: Console | None = None,  # 控制台对象，默认为 None
-    echoa: ConflgaEchoa | None = None,  # 可选的 ConflgaEchoa 实例
 ) -> Callable[
     [Callable[Concatenate[ConflgaConfig, ParamType], ReturnType]],  # 接收的函数类型
     Callable[ParamType, ReturnType],  # 返回的函数类型
@@ -49,7 +48,6 @@ def conflga_func(
         auto_print (bool): Whether to automatically print the final configuration.
         auto_print_override (bool): Whether to automatically print override configurations.
         console (Optional[Console]): Rich Console instance to use for output.
-        echoa (Optional[ConflgaEchoa]): Optional ConflgaEchoa instance for custom output control.
 
     Example:
         @conflga_func(config_dir="conf", default_config="config", enable_cli_override=True)
@@ -67,15 +65,12 @@ def conflga_func(
     ) -> Callable[ParamType, ReturnType]:
         @wraps(func)
         def wrapper(*args: ParamType.args, **kwargs: ParamType.kwargs) -> ReturnType:
-            # 获取或创建 echoa 实例
-            if echoa is not None:
-                output_echoa = echoa
-            else:
-                output_echoa = get_echoa()
+            # 获取 conflga_console 实例
+            output_console = get_console()
 
-            # 如果提供了 console，设置到 echoa 中
+            # 如果提供了 console，设置到 conflga_console 中
             if console is not None:
-                output_echoa.set_console(console)
+                output_console.console = console
 
             # Initialize configuration manager and load base configuration
             manager = ConflgaManager(config_dir=config_dir)
@@ -114,13 +109,13 @@ def conflga_func(
                 if override_config._data:  # Check if override config has any data
                     manager.override_config(override_config)
                     if auto_print_override:
-                        output_echoa.print_config(
+                        output_console.print_config(
                             config_data=override_config, title="Command Line Overrides"
                         )
 
             cfg = manager.get_config()
             if auto_print:
-                output_echoa.print_config(
+                output_console.print_config(
                     config_data=cfg,
                     title="Final Configuration",
                     directory=config_dir,
@@ -143,7 +138,6 @@ def conflga_method(
     auto_print: bool = True,
     auto_print_override: bool = True,
     console: Console | None = None,
-    echoa: ConflgaEchoa | None = None,
 ) -> Callable[
     [Callable[Concatenate[SelfType, ConflgaConfig, ParamType], ReturnType]],
     Callable[Concatenate[SelfType, ParamType], ReturnType],
@@ -168,7 +162,6 @@ def conflga_method(
         auto_print (bool): Whether to automatically print the final configuration.
         auto_print_override (bool): Whether to automatically print override configurations.
         console (Optional[Console]): Rich Console instance to use for output.
-        echoa (Optional[ConflgaEchoa]): Optional ConflgaEchoa instance for custom output control.
 
     Example:
         class MyApp:
@@ -184,13 +177,10 @@ def conflga_method(
         def wrapper(
             self: SelfType, *args: ParamType.args, **kwargs: ParamType.kwargs
         ) -> ReturnType:
-            if echoa is not None:
-                output_echoa = echoa
-            else:
-                output_echoa = get_echoa()
+            output_console = get_console()
 
             if console is not None:
-                output_echoa.set_console(console)
+                output_console.console = console
 
             manager = ConflgaManager(config_dir=config_dir)
             default_config_str = manager.load_default_file(default_config)
@@ -222,13 +212,13 @@ def conflga_method(
                 if override_config._data:
                     manager.override_config(override_config)
                     if auto_print_override:
-                        output_echoa.print_config(
+                        output_console.print_config(
                             config_data=override_config, title="Command Line Overrides"
                         )
 
             cfg = manager.get_config()
             if auto_print:
-                output_echoa.print_config(
+                output_console.print_config(
                     config_data=cfg,
                     title="Final Configuration",
                     directory=config_dir,

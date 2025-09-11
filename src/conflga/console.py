@@ -1,23 +1,177 @@
 from typing import Any
 from pathlib import Path
 
-from rich.console import Console
+from rich.console import Console as RichConsole
 from rich.tree import Tree
 from rich.text import Text
 from rich.panel import Panel
 from rich.table import Table
-from echoa import Echoa
+from rich.rule import Rule
 
 
-class ConflgaEchoa(Echoa):
+class Console:
     """
-    Conflga Echoa 控制台输出管理器
+    Conflga 控制台输出管理器
     """
 
     def __init__(
-        self, console: Console | None = None, prefix: str = "[Conflga]"
+        self,
+        console: RichConsole | None = None,
+        prefix: str = "[Conflga]",
+        enabled: bool = True,
     ) -> None:
-        super().__init__(console=console, prefix=prefix)
+        """
+        初始化 Console 实例
+
+        Args:
+            console: Rich Console 实例，None 使用默认控制台
+            prefix: 输出前缀
+            enabled: 是否启用输出
+        """
+        self._console = console or RichConsole()
+        self._prefix = prefix
+        self._enabled = enabled
+
+    @property
+    def console(self) -> RichConsole:
+        """
+        获取当前的 Rich Console 实例
+
+        Returns:
+            Rich Console 实例
+        """
+        return self._console
+
+    @console.setter
+    def console(self, console: RichConsole | None = None) -> None:
+        """
+        设置 Rich Console 实例
+
+        Args:
+            console: Rich Console 实例，None 使用默认控制台
+        """
+        self._console = console or RichConsole()
+
+    @property
+    def enabled(self) -> bool:
+        """
+        获取当前输出是否启用
+
+        Returns:
+            是否启用输出
+        """
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, value: bool) -> None:
+        """
+        设置输出是否启用
+
+        Args:
+            value: 是否启用输出
+        """
+        self._enabled = value
+
+    def info(self, message: str, **kwargs: Any) -> None:
+        """
+        输出信息消息
+
+        Args:
+            message: 消息内容
+            **kwargs: 额外参数
+        """
+        if not self._enabled:
+            return
+        text = Text(f"{self._prefix} ", style="blue bold")
+        text.append(message, style="white")
+        self._console.print(text, **kwargs)
+
+    def debug(self, message: str, **kwargs: Any) -> None:
+        """
+        输出调试消息
+
+        Args:
+            message: 消息内容
+            **kwargs: 额外参数
+        """
+        if not self._enabled:
+            return
+        text = Text(f"{self._prefix} ", style="dim blue")
+        text.append(f"[DEBUG] {message}", style="dim white")
+        self._console.print(text, **kwargs)
+
+    def warning(self, message: str, **kwargs: Any) -> None:
+        """
+        输出警告消息
+
+        Args:
+            message: 消息内容
+            **kwargs: 额外参数
+        """
+        if not self._enabled:
+            return
+        text = Text(f"{self._prefix} ", style="yellow bold")
+        text.append(f"⚠️  {message}", style="yellow")
+        self._console.print(text, **kwargs)
+
+    def error(self, message: str, **kwargs: Any) -> None:
+        """
+        输出错误消息
+
+        Args:
+            message: 消息内容
+            **kwargs: 额外参数
+        """
+        if not self._enabled:
+            return
+        text = Text(f"{self._prefix} ", style="red bold")
+        text.append(f"❌ {message}", style="red")
+        self._console.print(text, **kwargs)
+
+    def success(self, message: str, **kwargs: Any) -> None:
+        """
+        输出成功消息
+
+        Args:
+            message: 消息内容
+            **kwargs: 额外参数
+        """
+        if not self._enabled:
+            return
+        text = Text(f"{self._prefix} ", style="green bold")
+        text.append(f"✅ {message}", style="green")
+        self._console.print(text, **kwargs)
+
+    def panel(
+        self, message: str, title: str = "", style: str = "blue", **kwargs: Any
+    ) -> None:
+        """
+        输出面板消息
+
+        Args:
+            message: 消息内容
+            title: 面板标题
+            style: 面板样式
+            **kwargs: 额外参数
+        """
+        if not self._enabled:
+            return
+        panel = Panel(message, title=title or self._prefix, border_style=style)
+        self._console.print(panel, **kwargs)
+
+    def rule(self, title: str = "", style: str = "blue", **kwargs: Any) -> None:
+        """
+        输出分隔线
+
+        Args:
+            title: 分隔线标题
+            style: 样式
+            **kwargs: 额外参数
+        """
+        if not self._enabled:
+            return
+        rule = Rule(title, style=style)
+        self._console.print(rule, **kwargs)
 
     def print_config(
         self,
@@ -35,7 +189,7 @@ class ConflgaEchoa(Echoa):
             directory: 配置文件所在的目录路径
             files: 配置文件列表
         """
-        console = self.get_console()
+        console = self._console
 
         # 如果提供了配置来源信息，先显示来源
         if directory is not None or files is not None:
@@ -59,7 +213,7 @@ class ConflgaEchoa(Echoa):
 
     def _print_config_source(
         self,
-        console: Console,
+        console: RichConsole,
         directory: str | None = None,
         files: list[str] | None = None,
     ) -> None:
@@ -196,38 +350,38 @@ class ConflgaEchoa(Echoa):
             return str(value)
 
 
-_default_echoa = ConflgaEchoa()
+_default_console = Console()
 
 
-def get_echoa() -> ConflgaEchoa:
+def get_console() -> Console:
     """
-    获取全局 Echoa 实例
+    获取全局 Console 实例
 
     Returns:
-        ConflgaEchoa: 全局 Echoa 实例
+        Console: 全局 Console 实例
     """
-    return _default_echoa
+    return _default_console
 
 
-def set_echoa(console: Console | None = None) -> None:
+def set_console(console: RichConsole | None = None) -> None:
     """
-    设置默认 Echoa 控制台输出配置（向后兼容）
+    设置默认 Console 控制台输出配置（向后兼容）
 
     Args:
         console: Rich Console 实例，None 使用默认控制台
         prefix: 输出前缀
     """
-    _default_echoa.set_console(console)
+    _default_console.console = console
 
 
-def enable_echoa_output(enabled: bool = True) -> None:
+def enable_console_output(enabled: bool = True) -> None:
     """
-    启用或禁用默认 Echoa 输出（向后兼容）
+    启用或禁用默认 Console 输出（向后兼容）
 
     Args:
         enabled: 是否启用输出
     """
-    _default_echoa.set_enabled(enabled)
+    _default_console.enabled = enabled
 
 
 def info(message: str) -> None:
@@ -237,7 +391,7 @@ def info(message: str) -> None:
     Args:
         message: 要打印的消息
     """
-    _default_echoa.info(message)
+    _default_console.info(message)
 
 
 def warning(message: str) -> None:
@@ -247,7 +401,7 @@ def warning(message: str) -> None:
     Args:
         message: 要打印的消息
     """
-    _default_echoa.warning(message)
+    _default_console.warning(message)
 
 
 def error(message: str) -> None:
@@ -257,7 +411,7 @@ def error(message: str) -> None:
     Args:
         message: 要打印的消息
     """
-    _default_echoa.error(message)
+    _default_console.error(message)
 
 
 def debug(message: str) -> None:
@@ -267,4 +421,4 @@ def debug(message: str) -> None:
     Args:
         message: 要打印的消息
     """
-    _default_echoa.debug(message)
+    _default_console.debug(message)

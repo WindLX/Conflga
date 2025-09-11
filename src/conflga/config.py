@@ -4,7 +4,7 @@ from collections.abc import MutableMapping
 import rtoml as toml
 from rich.console import Console
 
-from .console import get_echoa
+from .console import get_console
 
 
 class ConflgaConfig(MutableMapping):
@@ -156,19 +156,19 @@ class ConflgaConfig(MutableMapping):
         files: list[str] | None = None,
     ) -> None:
         """
-        使用 ConflgaEchoa 美观地打印配置内容。
+        使用 ConflgaConsole 美观地打印配置内容。
 
         Args:
             title: 配置树的标题
-            console: rich Console 实例，如果为 None 则使用默认的 echoa 控制台
+            console: rich Console 实例，如果为 None 则使用默认的 console
             directory: 配置文件所在的目录路径
             files: 配置文件列表
         """
-        echoa = get_echoa()
+        conflga_console = get_console()
         if console is not None:
-            echoa.set_console(console)
+            conflga_console.console = console
 
-        echoa.print_config(
+        conflga_console.print_config(
             config_data=self,
             title=title,
             directory=directory,

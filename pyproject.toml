@@ -8,7 +8,6 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "echoa",
     "rtoml>=0.12.0",
     "simpleeval>=1.0.3",
 ]
@@ -23,6 +22,3 @@ dev = [
     "pytest-cov>=6.2.1",
     "pytest>=8.4.1",
 ]
-
-[tool.uv.sources]
-echoa = { git = "ssh://git@github.com/WindLX/Echoa.git" }
