@@ -148,6 +148,15 @@ class ConflgaConfig(MutableMapping):
 
         return {k: self._convert_value(v) for k, v in self._data.items()}
 
+    def to_toml(self) -> str:
+        """
+        Converts the configuration to a TOML string.
+
+        Returns:
+            str: The configuration as a TOML-formatted string.
+        """
+        return toml.dumps(self.to_dict())
+
     def pretty_print(
         self,
         title: str = "Configuration",

@@ -1,5 +1,7 @@
 from functools import wraps
 from typing import Callable, Concatenate, ParamSpec, TypeVar
+from pathlib import Path
+from datetime import datetime
 
 from rich.console import Console
 
@@ -24,6 +26,7 @@ def conflga_func(
     auto_print: bool = True,  # 是否自动打印配置
     auto_print_override: bool = True,  # 是否自动打印覆盖的配置
     console: Console | None = None,  # 控制台对象，默认为 None
+    backup_path: str | None = None,  # 备份目录路径，默认为 None
 ) -> Callable[
     [Callable[Concatenate[ConflgaConfig, ParamType], ReturnType]],  # 接收的函数类型
     Callable[ParamType, ReturnType],  # 返回的函数类型
@@ -48,6 +51,8 @@ def conflga_func(
         auto_print (bool): Whether to automatically print the final configuration.
         auto_print_override (bool): Whether to automatically print override configurations.
         console (Optional[Console]): Rich Console instance to use for output.
+        backup_path (Optional[str]): Directory path where the final configuration will be backed up
+                                   as a TOML file. If None, no backup will be created.
 
     Example:
         @conflga_func(config_dir="conf", default_config="config", enable_cli_override=True)
@@ -58,6 +63,11 @@ def conflga_func(
         # python script.py --conflga-override model.learning_rate=0.001 --conflga-override dataset.batch_size=32
         # or with use_namespace_prefix=False:
         # python script.py -o model.learning_rate=0.001 -o dataset.batch_size=32
+
+        # With backup functionality:
+        @conflga_func(config_dir="conf", default_config="config", backup_path="backup")
+        def main_with_backup(cfg: ConflgaConfig):
+            print(f"Learning rate: {cfg.model.learning_rate}")
     """
 
     def decorator(
@@ -114,6 +124,22 @@ def conflga_func(
                         )
 
             cfg = manager.get_config()
+
+            # Backup configuration if backup_path is specified
+            if backup_path is not None:
+                backup_dir = Path(backup_path)
+                backup_dir.mkdir(parents=True, exist_ok=True)
+
+                # Generate a timestamped filename with microseconds for uniqueness
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[
+                    :-3
+                ]  # Include milliseconds
+                backup_filename = f"config_backup_{timestamp}.toml"
+                backup_file_path = backup_dir / backup_filename
+
+                # Write the configuration to backup file
+                backup_file_path.write_text(cfg.to_toml(), encoding="utf-8")
+
             if auto_print:
                 output_console.print_config(
                     config_data=cfg,
@@ -138,6 +164,7 @@ def conflga_method(
     auto_print: bool = True,
     auto_print_override: bool = True,
     console: Console | None = None,
+    backup_path: str | None = None,  # 备份目录路径，默认为 None
 ) -> Callable[
     [Callable[Concatenate[SelfType, ConflgaConfig, ParamType], ReturnType]],
     Callable[Concatenate[SelfType, ParamType], ReturnType],
@@ -162,11 +189,17 @@ def conflga_method(
         auto_print (bool): Whether to automatically print the final configuration.
         auto_print_override (bool): Whether to automatically print override configurations.
         console (Optional[Console]): Rich Console instance to use for output.
+        backup_path (Optional[str]): Directory path where the final configuration will be backed up
+                                   as a TOML file. If None, no backup will be created.
 
     Example:
         class MyApp:
             @conflga_method(config_dir="conf", default_config="config", enable_cli_override=True)
             def run(self, cfg: ConflgaConfig):
+                print(f"Learning rate: {cfg.model.learning_rate}")
+
+            @conflga_method(config_dir="conf", default_config="config", backup_path="backup")
+            def run_with_backup(self, cfg: ConflgaConfig):
                 print(f"Learning rate: {cfg.model.learning_rate}")
     """
 
@@ -217,6 +250,22 @@ def conflga_method(
                         )
 
             cfg = manager.get_config()
+
+            # Backup configuration if backup_path is specified
+            if backup_path is not None:
+                backup_dir = Path(backup_path)
+                backup_dir.mkdir(parents=True, exist_ok=True)
+
+                # Generate a timestamped filename with microseconds for uniqueness
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[
+                    :-3
+                ]  # Include milliseconds
+                backup_filename = f"config_backup_{timestamp}.toml"
+                backup_file_path = backup_dir / backup_filename
+
+                # Write the configuration to backup file
+                backup_file_path.write_text(cfg.to_toml(), encoding="utf-8")
+
             if auto_print:
                 output_console.print_config(
                     config_data=cfg,
