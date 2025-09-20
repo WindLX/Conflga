@@ -1,15 +1,10 @@
 from functools import wraps
 from typing import Callable, Concatenate, ParamSpec, TypeVar
-from pathlib import Path
-from datetime import datetime
 
 from rich.console import Console
 
-from .preprocessor import ConflgaPreprocessor
-from .manager import ConflgaManager
 from .config import ConflgaConfig
-from .cli import ConflgaCLI
-from .console import get_console
+from .api import get_config
 
 ParamType = ParamSpec("ParamType")  # ParamType 代表装饰后函数所接受的参数
 ReturnType = TypeVar("ReturnType")  # ReturnType 代表原始函数的返回类型
@@ -75,78 +70,18 @@ def conflga_func(
     ) -> Callable[ParamType, ReturnType]:
         @wraps(func)
         def wrapper(*args: ParamType.args, **kwargs: ParamType.kwargs) -> ReturnType:
-            # 获取 conflga_console 实例
-            output_console = get_console()
-
-            # 如果提供了 console，设置到 conflga_console 中
-            if console is not None:
-                output_console.console = console
-
-            # Initialize configuration manager and load base configuration
-            manager = ConflgaManager(config_dir=config_dir)
-            default_config_str = manager.load_default_file(default_config)
-            if configs_to_merge:
-                merged_config_strs = (
-                    manager.load_merged_file(*configs_to_merge)
-                    if configs_to_merge
-                    else []
-                )
-            else:
-                merged_config_strs = []
-
-            if enable_preprocessor:
-                preprocessor = ConflgaPreprocessor()
-                # Preprocess the default configuration
-                default_config_str = preprocessor.preprocess_text(default_config_str)
-                # Preprocess additional configurations if any, sharing the same preprocessor context
-                merged_config_strs = [
-                    preprocessor.preprocess_text(config_str)
-                    for config_str in merged_config_strs
-                ]
-
-            manager.load_default(default_config_str)
-
-            # Merge additional configuration files if specified
-            if configs_to_merge:
-                manager.merge_config(*merged_config_strs)
-
-            # Apply command line overrides if enabled
-            if enable_cli_override:
-                # Use configurable namespace prefix
-                cli = ConflgaCLI(use_namespace_prefix=use_namespace_prefix)
-                override_config = cli.parse_overrides()
-                # Only apply overrides if there are any
-                if override_config._data:  # Check if override config has any data
-                    manager.override_config(override_config)
-                    if auto_print_override:
-                        output_console.print_config(
-                            config_data=override_config, title="Command Line Overrides"
-                        )
-
-            cfg = manager.get_config()
-
-            # Backup configuration if backup_path is specified
-            if backup_path is not None:
-                backup_dir = Path(backup_path)
-                backup_dir.mkdir(parents=True, exist_ok=True)
-
-                # Generate a timestamped filename with microseconds for uniqueness
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[
-                    :-3
-                ]  # Include milliseconds
-                backup_filename = f"config_backup_{timestamp}.toml"
-                backup_file_path = backup_dir / backup_filename
-
-                # Write the configuration to backup file
-                backup_file_path.write_text(cfg.to_toml(), encoding="utf-8")
-
-            if auto_print:
-                output_console.print_config(
-                    config_data=cfg,
-                    title="Final Configuration",
-                    directory=config_dir,
-                    files=[default_config] + (configs_to_merge or []),
-                )
+            cfg = get_config(
+                config_dir=config_dir,
+                default_config=default_config,
+                configs_to_merge=configs_to_merge,
+                enable_preprocessor=enable_preprocessor,
+                enable_cli_override=enable_cli_override,
+                use_namespace_prefix=use_namespace_prefix,
+                auto_print=auto_print,
+                auto_print_override=auto_print_override,
+                console=console,
+                backup_path=backup_path,
+            )
             return func(cfg, *args, **kwargs)
 
         return wrapper
@@ -210,69 +145,18 @@ def conflga_method(
         def wrapper(
             self: SelfType, *args: ParamType.args, **kwargs: ParamType.kwargs
         ) -> ReturnType:
-            output_console = get_console()
-
-            if console is not None:
-                output_console.console = console
-
-            manager = ConflgaManager(config_dir=config_dir)
-            default_config_str = manager.load_default_file(default_config)
-            if configs_to_merge:
-                merged_config_strs = (
-                    manager.load_merged_file(*configs_to_merge)
-                    if configs_to_merge
-                    else []
-                )
-            else:
-                merged_config_strs = []
-
-            if enable_preprocessor:
-                preprocessor = ConflgaPreprocessor()
-                default_config_str = preprocessor.preprocess_text(default_config_str)
-                merged_config_strs = [
-                    preprocessor.preprocess_text(config_str)
-                    for config_str in merged_config_strs
-                ]
-
-            manager.load_default(default_config_str)
-
-            if configs_to_merge:
-                manager.merge_config(*merged_config_strs)
-
-            if enable_cli_override:
-                cli = ConflgaCLI(use_namespace_prefix=use_namespace_prefix)
-                override_config = cli.parse_overrides()
-                if override_config._data:
-                    manager.override_config(override_config)
-                    if auto_print_override:
-                        output_console.print_config(
-                            config_data=override_config, title="Command Line Overrides"
-                        )
-
-            cfg = manager.get_config()
-
-            # Backup configuration if backup_path is specified
-            if backup_path is not None:
-                backup_dir = Path(backup_path)
-                backup_dir.mkdir(parents=True, exist_ok=True)
-
-                # Generate a timestamped filename with microseconds for uniqueness
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[
-                    :-3
-                ]  # Include milliseconds
-                backup_filename = f"config_backup_{timestamp}.toml"
-                backup_file_path = backup_dir / backup_filename
-
-                # Write the configuration to backup file
-                backup_file_path.write_text(cfg.to_toml(), encoding="utf-8")
-
-            if auto_print:
-                output_console.print_config(
-                    config_data=cfg,
-                    title="Final Configuration",
-                    directory=config_dir,
-                    files=[default_config] + (configs_to_merge or []),
-                )
+            cfg = get_config(
+                config_dir=config_dir,
+                default_config=default_config,
+                configs_to_merge=configs_to_merge,
+                enable_preprocessor=enable_preprocessor,
+                enable_cli_override=enable_cli_override,
+                use_namespace_prefix=use_namespace_prefix,
+                auto_print=auto_print,
+                auto_print_override=auto_print_override,
+                console=console,
+                backup_path=backup_path,
+            )
             return func(self, cfg, *args, **kwargs)
 
         return wrapper

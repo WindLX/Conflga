@@ -11,9 +11,7 @@ class ConflgaCLI:
     Supports override syntax for configuration values.
     """
 
-    def __init__(
-        self, use_namespace_prefix: bool = True, custom_arg_name: str | None = None
-    ):
+    def __init__(self, use_namespace_prefix: bool = True):
         """
         Initialize CLI parser with configurable argument naming.
 
@@ -24,7 +22,6 @@ class ConflgaCLI:
                            Should start with -- for long options.
         """
         self.use_namespace_prefix = use_namespace_prefix
-        self.custom_arg_name = custom_arg_name
 
         # Use add_help=False to avoid help conflicts in embedded scenarios
         self.parser = argparse.ArgumentParser(
@@ -37,7 +34,7 @@ class ConflgaCLI:
 
     def _get_epilog_text(self) -> str:
         """Get epilog text with appropriate argument names."""
-        arg_name = self._get_argument_name()
+        arg_name = "/".join(self._get_argument_name())
         return f"""
 Override Examples:
   {arg_name} model.learning_rate=0.001
@@ -49,33 +46,19 @@ Override Examples:
   {arg_name} nested.deep.value="hello world"
         """
 
-    def _get_argument_name(self) -> str:
+    def _get_argument_name(self) -> list[str]:
         """Get the argument name being used."""
-        if self.custom_arg_name:
-            return self.custom_arg_name
-        elif self.use_namespace_prefix:
-            return "--conflga-override"
+        if self.use_namespace_prefix:
+            return ["--conflga-override"]
         else:
-            return "-o"
+            return ["-o", "--override"]
 
     def _setup_arguments(self):
         """Setup command line arguments."""
-        if self.custom_arg_name:
-            # Use custom argument name
-            self.parser.add_argument(
-                self.custom_arg_name,
-                action="append",
-                dest="overrides",
-                metavar="KEY=VALUE",
-                help="Override configuration values (can be used multiple times). "
-                "Supports nested keys with dot notation (e.g., model.lr=0.01). "
-                "Values are automatically parsed as Python literals.",
-            )
-        elif self.use_namespace_prefix:
+        if self.use_namespace_prefix:
             # Use namespace prefix to avoid conflicts, with short alias -c
             self.parser.add_argument(
-                "-co",
-                "--conflga-override",
+                *self._get_argument_name(),
                 action="append",
                 dest="overrides",
                 metavar="KEY=VALUE",
@@ -86,8 +69,7 @@ Override Examples:
         else:
             # Use short options (may conflict)
             self.parser.add_argument(
-                "-o",
-                "--override",
+                *self._get_argument_name(),
                 action="append",
                 dest="overrides",
                 metavar="KEY=VALUE",
@@ -263,7 +245,6 @@ Override Examples:
 def create_override_config_from_args(
     override_strings: list[str] | None = None,
     use_namespace_prefix: bool = True,
-    custom_arg_name: str | None = None,
 ) -> ConflgaConfig:
     """
     Convenience function to create override configuration from command line arguments.
@@ -271,7 +252,6 @@ def create_override_config_from_args(
     Args:
         override_strings: List of override strings. If None, parses from command line.
         use_namespace_prefix: If True, use --conflga-override to avoid conflicts.
-        custom_arg_name: Custom argument name to use instead of defaults.
 
     Returns:
         ConflgaConfig: Configuration object with override values
@@ -293,7 +273,5 @@ def create_override_config_from_args(
         ...     use_namespace_prefix=False
         ... )
     """
-    cli = ConflgaCLI(
-        use_namespace_prefix=use_namespace_prefix, custom_arg_name=custom_arg_name
-    )
+    cli = ConflgaCLI(use_namespace_prefix=use_namespace_prefix)
     return cli.parse_overrides(override_strings)
