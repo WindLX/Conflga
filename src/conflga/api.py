@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -9,6 +10,11 @@ from .manager import ConflgaManager
 from .config import ConflgaConfig
 from .cli import ConflgaCLI
 from .console import get_console
+
+
+def _sort_key(filename: str) -> int | float:
+    m = re.match(r"^(\d+)[-_]", filename)
+    return -int(m.group(1)) if m else float("-inf")
 
 
 def get_config(
@@ -29,9 +35,12 @@ def get_config(
 
     manager = ConflgaManager(config_dir=config_dir)
     default_config_str = manager.load_default_file(default_config)
-    merged_config_strs = (
-        manager.load_merged_file(*configs_to_merge) if configs_to_merge else []
-    )
+    if configs_to_merge:
+        # Sort files: if filename starts with digits + '_', sort by number descending
+        sorted_configs = sorted(configs_to_merge, key=_sort_key)
+        merged_config_strs = manager.load_merged_file(*sorted_configs)
+    else:
+        merged_config_strs = []
 
     if enable_preprocessor:
         preprocessor = ConflgaPreprocessor()

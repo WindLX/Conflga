@@ -1,6 +1,3 @@
-#let exp_name = "hopper_dppo" # 实验名称
-#let num_envs = 4 # 环境数量
-
 [log]
 log_dir = "runs"
 experiment_prefix = "{{ exp_name }}-{{ str(num_envs) }}"
@@ -37,4 +34,3 @@ hidden_dim = 256
 [eval] # 评估参数
 eval_epochs = 1
 eval_freq = 1
-

@@ -10,8 +10,8 @@ class MyAwesomeTraining:
 
     @conflga_method(
         config_dir="examples/awesome_config",
-        default_config="base_config",
-        configs_to_merge=["other_config"],
+        default_config="00-marcos",
+        configs_to_merge=["01-base_config", "02-other_config"],
         enable_preprocessor=True,
         enable_cli_override=True,
         use_namespace_prefix=True,
@@ -29,8 +29,8 @@ class MyAwesomeTraining:
 
 @conflga_func(
     config_dir="examples/awesome_config",
-    default_config="base_config",
-    configs_to_merge=["other_config"],
+    default_config="00-marcos",
+    configs_to_merge=["01-base_config", "02-other_config"],
     enable_preprocessor=True,
     enable_cli_override=True,
     use_namespace_prefix=True,

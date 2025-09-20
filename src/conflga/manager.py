@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 from typing import Any
 
@@ -71,32 +70,20 @@ class ConflgaManager:
         self._config = ConflgaConfig.loads(default_config_str)
         return self
 
-    def merge_config(self, *config_names: str) -> "ConflgaManager":
+    def merge_config(self, *config_strs: str) -> "ConflgaManager":
         """
-        Merges additional configurations on top of the current configuration from TOML files.
-        If the config file names have numeric prefixes, they are merged in order of the prefix (ascending).
-        Later files override earlier ones.
+        Merges additional configurations on top of the current configuration from TOML strings.
+        Later arguments override earlier ones.
 
         Args:
-            *config_names (str): Names of the TOML files to merge (without .toml extension).
+            *config_strs (str): TOML strings to merge.
         """
         if self._config is None:
             raise RuntimeError(
                 "Load a default configuration first using load_default()."
             )
 
-        def extract_prefix(name: str) -> int:
-            match = re.match(r"(\d+)", name)
-            return int(match.group(1)) if match else -1
-
-        # Sort config_names by numeric prefix (ascending), non-numeric go first
-        sorted_names = sorted(config_names, key=extract_prefix)
-
-        for config_name in sorted_names:
-            config_path = self.config_dir / f"{config_name}.toml"
-            if not config_path.exists():
-                raise FileNotFoundError(f"Config file not found: {config_path}")
-            config_str = config_path.read_text(encoding="utf-8")
+        for config_str in config_strs:
             new_config = ConflgaConfig.loads(config_str)
             self._config.merge_with(new_config)
         return self
