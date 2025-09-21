@@ -19,7 +19,7 @@ def _sort_key(filename: str) -> int | float:
 
 def get_config(
     config_dir: str = "conf",
-    default_config: str = "config",
+    default_config: str | None = "config",
     configs_to_merge: Optional[list[str]] = None,
     enable_preprocessor: bool = True,
     enable_cli_override: bool = True,
@@ -34,7 +34,11 @@ def get_config(
         output_console.console = console
 
     manager = ConflgaManager(config_dir=config_dir)
-    default_config_str = manager.load_default_file(default_config)
+    if default_config is not None:
+        default_config_str = manager.load_default_file(default_config)
+    else:
+        default_config_str = ""
+
     if configs_to_merge:
         # Sort files: if filename starts with digits + '_', sort by number descending
         sorted_configs = sorted(configs_to_merge, key=_sort_key)
@@ -79,6 +83,7 @@ def get_config(
             config_data=cfg,
             title="Final Configuration",
             directory=config_dir,
-            files=[default_config] + (configs_to_merge or []),
+            files=([default_config] if default_config is not None else [])
+            + (configs_to_merge or []),
         )
     return cfg
