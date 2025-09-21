@@ -14,7 +14,7 @@ from .console import get_console
 
 def _sort_key(filename: str) -> int | float:
     m = re.match(r"^(\d+)[-_]", filename)
-    return -int(m.group(1)) if m else float("-inf")
+    return int(m.group(1)) if m else float("inf")
 
 
 def get_config(
